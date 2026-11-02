@@ -1,0 +1,58 @@
+name: Hardware report / Hardware-Rückmeldung
+description: Tell us how Borealis works on your system. / Wie läuft Borealis auf deinem System?
+labels: ["hardware"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing Borealis on other hardware! / Danke fürs Testen auf anderer Hardware!
+  - type: input
+    id: version
+    attributes:
+      label: Borealis version / Version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: board
+    attributes:
+      label: Motherboard and BIOS version / Mainboard und BIOS-Version
+      placeholder: "ROG STRIX B650E-E GAMING WIFI, BIOS 3040"
+    validations:
+      required: true
+  - type: input
+    id: cpu-ram
+    attributes:
+      label: CPU and memory / CPU und RAM
+      placeholder: "Ryzen 7 7800X3D; 2 × 32 GB DDR5 (model / Modell)"
+    validations:
+      required: true
+  - type: textarea
+    id: devices
+    attributes:
+      label: Connected devices / Angeschlossene Geräte
+      description: What is on the ARGB and fan headers? / Was hängt an den ARGB- und Lüfteranschlüssen?
+      placeholder: |
+        ARGB 1: AIO pump head / AIO-Pumpe
+        CPU_FAN: radiator fans / Radiatorlüfter
+  - type: checkboxes
+    id: works
+    attributes:
+      label: What works? / Was funktioniert?
+      options:
+        - label: Motherboard lighting / Mainboard-Beleuchtung
+        - label: ARGB headers / ARGB-Header
+        - label: Memory lighting / RAM-Beleuchtung
+        - label: Fan speeds and temperatures / Drehzahlen und Temperaturen
+        - label: Fan curves / Lüfterkurven
+        - label: Auto tuning / Auto-Tuning
+  - type: textarea
+    id: problems
+    attributes:
+      label: What does not work? / Was funktioniert nicht?
+  - type: textarea
+    id: log
+    attributes:
+      label: Service log / Dienst-Protokoll
+      description: From / Aus `C:\ProgramData\Borealis\logs` – remove anything personal first. / Vorher Persönliches entfernen.
+      render: text

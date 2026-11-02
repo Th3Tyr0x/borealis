@@ -1,0 +1,36 @@
+name: Bug report / Fehler melden
+description: Something does not work as expected. / Etwas funktioniert nicht wie erwartet.
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Borealis version / Version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Windows version and motherboard / Windows-Version und Mainboard
+      placeholder: "Windows 11 24H2, ROG STRIX B650E-E GAMING WIFI"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What did you do? / Was hast du gemacht?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect, what happened? / Was hast du erwartet, was ist passiert?
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Service log / Dienst-Protokoll
+      description: From / Aus `C:\ProgramData\Borealis\logs` – remove anything personal first. / Vorher Persönliches entfernen.
+      render: text
