@@ -255,6 +255,10 @@ public sealed class Nct6799 : IDisposable
         CurveTempRegisters.Select(r => io.Read(ControlRegister(fan, r))).ToArray(),
         CurveDutyRegisters.Select(r => io.Read(ControlRegister(fan, r))).ToArray());
 
+    /// <summary>Register 0x00–0x0F der Regelbank eines Lüfterkanals (nur lesend, für das Protokoll).</summary>
+    public byte[] ReadControlBlock(int fan) =>
+        Locked(io => Enumerable.Range(0, 16).Select(r => io.Read(ControlRegister(fan, (byte)r))).ToArray());
+
     /// <summary>Eine zuvor gelesene Kurve unverändert zurückschreiben (Modus, Punkte); gibt die zurückgelesene Kurve zurück.</summary>
     public ChipCurve RestoreCurve(int fan, ChipCurve original) => Locked(io =>
     {
@@ -266,10 +270,12 @@ public sealed class Nct6799 : IDisposable
 
     /// <summary>
     /// Kurve in den Chip schreiben und SmartFan IV einschalten; danach regelt der Chip selbst nach der Temperaturquelle
-    /// des Kanals (auf dem B650E-E die CPU), auch wenn Borealis nicht läuft. Gibt die zurückgelesene Kurve zurück.
+    /// des Kanals (auf dem B650E-E die CPU), auch wenn Borealis nicht läuft. Mit <paramref name="source"/> wird auch die
+    /// Temperaturquelle gesetzt (Bits 0–4 im Register 0x00 der Bank, die übrigen bleiben). Gibt die zurückgelesene Kurve zurück.
     /// </summary>
-    public ChipCurve WriteCurve(int fan, IReadOnlyList<byte> temps, IReadOnlyList<byte> duties)
+    public ChipCurve WriteCurve(int fan, IReadOnlyList<byte> temps, IReadOnlyList<byte> duties, TempSource? source = null)
     {
+        if (source is { } s && (s == TempSource.None || (int)s > 0x1F)) throw new ArgumentException($"Ungültige Temperaturquelle {s}.");
         if (temps.Count != 4 || duties.Count != 4) throw new ArgumentException("Eine Kurve hat genau vier Punkte.");
         for (int i = 0; i < 4; i++)
         {
@@ -278,6 +284,11 @@ public sealed class Nct6799 : IDisposable
         }
         return Locked(io =>
         {
+            if (source is { } src)
+            {
+                byte old = io.Read(ControlRegister(fan, SourceRegister));
+                if ((old & 0x1F) != (byte)src) io.Write(ControlRegister(fan, SourceRegister), (byte)((old & 0xE0) | (byte)src));
+            }
             // Reihenfolge wie im ASUS-Dienst: Modus, Temperaturen, Leistung
             io.Write(ControlRegister(fan, ModeRegister), SmartFan4);
             for (int i = 0; i < 4; i++) io.Write(ControlRegister(fan, CurveTempRegisters[i]), temps[i]);

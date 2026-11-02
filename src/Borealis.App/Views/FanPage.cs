@@ -100,7 +100,7 @@ sealed class FanPage : UserControl, IPage
         if (s == null) return;
         foreach (var f in s.Fans) if (fanCards.TryGetValue(f.Id, out var c)) c.Update(f);
         foreach (var t in s.Temperatures) if (tempCards.TryGetValue(t.Id, out var c)) c.Update(t);
-        editor.CurrentTemp = s.Temperatures.FirstOrDefault(t => t.Id == "tctl")?.Celsius;
+        editor.CurrentTemp = s.Temperatures.FirstOrDefault(t => t.Id == FanSettings.SensorId(working.SourceFor(Header())))?.Celsius;
         footer.Text = (s.Source != null ? Loc.T($"Quelle: {s.Source}", $"Source: {s.Source.Replace(" über ", " via ")}") : "") + Loc.T($" · aktualisiert {s.Time:HH:mm:ss}", $" · updated {s.Time:HH:mm:ss}");
         error.Text = s.Error ?? "";
         error.Visibility = s.Error == null ? Visibility.Collapsed : Visibility.Visible;
@@ -127,9 +127,9 @@ sealed class FanPage : UserControl, IPage
         bool asusFan = S.AsusFanServiceInstalled;
         text.Children.Add(new TextBlock
         {
-            Text = Loc.T("Borealis schreibt die Kurven in den Lüfter-Chip; der regelt danach selbst nach der CPU-Temperatur, auch wenn " +
+            Text = Loc.T("Borealis schreibt die Kurven in den Lüfter-Chip; der regelt danach selbst nach der gewählten Temperatur, auch wenn " +
                          "Borealis nicht läuft." + (asusFan ? " Der ASUS-Lüfterdienst wird dafür angehalten." : ""),
-                         "Borealis writes the curves into the fan chip, which then regulates on its own by CPU temperature, even when " +
+                         "Borealis writes the curves into the fan chip, which then regulates on its own by the chosen temperature, even when " +
                          "Borealis is not running." + (asusFan ? " The ASUS fan service is stopped for this." : "")),
             Foreground = Ui.Brush("TextDim"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0),
         });
@@ -173,6 +173,7 @@ sealed class FanPage : UserControl, IPage
         var copy = new Button { Content = Loc.T("Auf alle Lüfter übertragen", "Copy to all fans"), Margin = new Thickness(0, 0, 10, 0) };
         var reset = new Button();
         var fanRow = new WrapPanel { Margin = new Thickness(0, 0, 0, 8) };
+        var sourceRow = new StackPanel();
         var headers = BoardFans.Headers.Where(HeaderVisible).ToList();
         if (headers.Count == 0) headers = BoardFans.Headers.ToList();
         if (headers.All(h => h.Id != selectedFan)) selectedFan = headers[0].Id;
@@ -184,6 +185,7 @@ sealed class FanPage : UserControl, IPage
             fanRow.Children.Add(b);
         }
         panel.Children.Add(fanRow);
+        panel.Children.Add(sourceRow);
         (editor.Parent as Panel)?.Children.Remove(editor);
         panel.Children.Add(editor);
         panel.Children.Add(hint);
@@ -214,6 +216,24 @@ sealed class FanPage : UserControl, IPage
             var own = working.ProfileOverride(working.Mode, h.Id);
             editor.SetCurve(working.CurveFor(h), editable: on && editable);
             editor.Tuning = tuning;
+            var source = working.SourceFor(h);
+            editor.SourceName = FanSettings.DisplayName(source);
+            editor.CurrentTemp = last?.Temperatures.FirstOrDefault(t => t.Id == FanSettings.SensorId(source))?.Celsius;
+            sourceRow.Children.Clear();
+            if (FanSettings.CanChooseSource(h))
+            {
+                sourceRow.Children.Add(new TextBlock { Text = Loc.T("Regeln nach", "Regulate by"), Foreground = Ui.Brush("TextDim"), Margin = new Thickness(0, 4, 0, 6) });
+                var id = h.Id;
+                var sources = Ui.Segments(Enum.GetValues<FanTempSource>().Select(x => (x, FanSettings.DisplayName(x))), source, async x =>
+                {
+                    if (x == FanTempSource.Cpu) working.Sources.Remove(id);
+                    else working.Sources[id] = x;
+                    await SendAsync();
+                }, "FanSource");
+                sources.IsEnabled = on;
+                sources.Margin = new Thickness(0, 0, 0, 10);
+                sourceRow.Children.Add(sources);
+            }
             // Gestrichelt zum Vergleich: bei eigener Anpassung die berechnete Kurve, sonst dieselbe ohne Messung
             editor.SetReference(own != null ? FanSettings.Preset(working.Mode, h, tuning)
                 : tuned ? FanSettings.Normalize(FanSettings.Preset(working.Mode, h)) : null);
@@ -232,6 +252,11 @@ sealed class FanPage : UserControl, IPage
                                 $"“{mode}” adapted to {who} by auto tuning ({tuning!.Time:MM/dd HH:mm}); dashed: without measurement. {drag} The change only applies to {who} in “{mode}”.")
                 : Loc.T($"Feste Kurve des Modus „{mode}“ (ohne Messung). {drag} Die Änderung gilt nur für {who} in „{mode}“.",
                         $"Fixed curve of the “{mode}” mode (without measurement). {drag} The change only applies to {who} in “{mode}”.");
+            if (!FanSettings.CanChooseSource(h))
+                hint.Text += Loc.T(" Der CPU-Lüfter regelt immer nach der CPU-Temperatur.", " The CPU fan always follows the CPU temperature.");
+            else if (source != FanTempSource.Cpu)
+                hint.Text += Loc.T($" Die Temperaturen der Kurve beziehen sich auf „{FanSettings.DisplayName(source)}“.",
+                                   $" The curve temperatures refer to “{FanSettings.DisplayName(source)}”.");
             if (!on) hint.Text = Loc.T("Vorschau. Die Kurven gelten erst, wenn Borealis die Lüfter steuert. ", "Preview. The curves only apply once Borealis controls the fans. ") + hint.Text;
         }
         ShowCurve();

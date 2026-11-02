@@ -5,6 +5,9 @@ namespace Borealis.Core.Profiles;
 /// <summary>Lüftermodus: feste Kurven für alle Lüfter oder eigene Kurven je Lüfter.</summary>
 public enum FanMode { Silent, Standard, Turbo, FullSpeed, Custom }
 
+/// <summary>Temperatur, nach der der Chip einen Lüfter regelt.</summary>
+public enum FanTempSource { Cpu, Motherboard, CpuSocket }
+
 /// <summary>Kurvenpunkt: ab <see cref="Temp"/> °C läuft der Lüfter mit <see cref="Duty"/> % (dazwischen linear).</summary>
 public sealed class FanPoint
 {
@@ -35,8 +38,41 @@ public sealed class FanSettings
     /// Fehlt ein Eintrag, gilt die berechnete Kurve (<see cref="Preset(FanMode, FanHeader, FanTuning?)"/>).
     /// </summary>
     public Dictionary<string, Dictionary<string, List<FanPoint>>> ProfileCurves { get; set; } = new();
+    /// <summary>Temperaturquelle je Lüfter (Kennung wie „SYSFAN“); fehlt = CPU wie bei ASUS.</summary>
+    public Dictionary<string, FanTempSource> Sources { get; set; } = new();
 
     public const int MinTemp = 20, MaxTemp = 95;
+
+    /// <summary>
+    /// Der CPU-Lüfter regelt immer nach der CPU: Nach der Mainboard-Temperatur würde er unter Last zu langsam laufen.
+    /// </summary>
+    public static bool CanChooseSource(FanHeader fan) => fan.Id != "CPUFAN";
+
+    public FanTempSource SourceFor(FanHeader fan) =>
+        CanChooseSource(fan) ? Sources.GetValueOrDefault(fan.Id) : FanTempSource.Cpu;
+
+    /// <summary>Wert für das Quellregister des Lüfter-Chips (CPU = 28, wie der ASUS-Lüfterdienst es eingestellt hat).</summary>
+    public static TempSource ChipSource(FanTempSource s) => s switch
+    {
+        FanTempSource.Motherboard => TempSource.Systin,
+        FanTempSource.CpuSocket => TempSource.Cputin,
+        _ => TempSource.Peci0Cal,
+    };
+
+    /// <summary>Kennung des passenden Messwerts in <see cref="SensorSnapshot.Temperatures"/>.</summary>
+    public static string SensorId(FanTempSource s) => s switch
+    {
+        FanTempSource.Motherboard => "systin",
+        FanTempSource.CpuSocket => "cputin",
+        _ => "tctl",
+    };
+
+    public static string DisplayName(FanTempSource s) => s switch
+    {
+        FanTempSource.Motherboard => Localization.Loc.Term("Mainboard"),
+        FanTempSource.CpuSocket => Localization.Loc.Term("CPU-Sockel"),
+        _ => "CPU",
+    };
 
     /// <summary>Name in der Sprache der Oberfläche.</summary>
     public static string DisplayName(FanMode m) => Localization.Loc.Term(GermanName(m));
@@ -180,6 +216,7 @@ public sealed class FanSettings
         Tuning = Tuning.ToDictionary(k => k.Key, k => k.Value.Clone()),
         ProfileCurves = ProfileCurves.ToDictionary(m => m.Key,
             m => m.Value.ToDictionary(k => k.Key, k => k.Value.Select(p => new FanPoint(p.Temp, p.Duty)).ToList())),
+        Sources = new(Sources),
     };
 }
 

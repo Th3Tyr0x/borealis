@@ -136,12 +136,20 @@ public sealed class FanCurveEditor : UserControl
         Redraw();
     }
 
-    /// <summary>Aktuelle CPU-Temperatur als Markierung (null = ausblenden).</summary>
+    /// <summary>Aktuelle Temperatur der Quelle als Markierung (null = ausblenden).</summary>
     public double? CurrentTemp
     {
         get => currentTemp;
         set { currentTemp = value; Redraw(); }
     }
+
+    /// <summary>Name der Temperaturquelle in der Markierung („CPU“, „Mainboard“ …).</summary>
+    public string SourceName
+    {
+        get => sourceName;
+        set { sourceName = value; Redraw(); }
+    }
+    string sourceName = "CPU";
 
     /// <summary>Ergebnis des Auto-Tunings: zeigt die Mindestleistung und die geschätzte Drehzahl.</summary>
     public FanTuning? Tuning
@@ -219,7 +227,7 @@ public sealed class FanCurveEditor : UserControl
             marker.X1 = marker.X2 = x;
             marker.Y1 = Y(0);
             marker.Y2 = Y(100);
-            markerText.Text = $"CPU {t:0} °C → {duty} %" + (tuning != null ? $" ≈ {tuning.RpmAt(duty):N0} {Loc.T("U/min", "RPM")}" : "");
+            markerText.Text = $"{sourceName} {t:0} °C → {duty} %" + (tuning != null ? $" ≈ {tuning.RpmAt(duty):N0} {Loc.T("U/min", "RPM")}" : "");
             Canvas.SetLeft(markerText, x + 6 > W - 210 ? x - 216 : x + 6);
             Canvas.SetTop(markerText, Top);
             Canvas.SetLeft(markerDot, x - 5);
