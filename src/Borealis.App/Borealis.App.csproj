@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>Borealis</AssemblyName>
+    <RootNamespace>Borealis.App</RootNamespace>
+    <UseWPF>true</UseWPF>
+    <!-- NotifyIcon für das Tray-Symbol -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- Programm- und Fenstersymbol; erzeugt mit tools\make_icon.ps1 -->
+    <ApplicationIcon>Assets\Borealis.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Für das Tray-Symbol -->
+    <Resource Include="Assets\Borealis.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- WinForms-Namespaces nicht global importieren, sonst kollidieren Application, MessageBox usw. mit WPF -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Borealis.Core\Borealis.Core.csproj" />
+  </ItemGroup>
+
+</Project>

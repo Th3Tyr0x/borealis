@@ -1,0 +1,66 @@
+﻿<Window x:Class="Borealis.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Borealis" Height="820" Width="1300" MinHeight="560" MinWidth="980"
+        Icon="pack://application:,,,/Assets/Borealis.ico"
+        WindowStartupLocation="CenterScreen" FontFamily="Segoe UI" FontSize="13"
+        Background="{DynamicResource Bg0}" Foreground="{DynamicResource Text}"
+        TextOptions.TextFormattingMode="Display">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="230" />
+            <ColumnDefinition />
+        </Grid.ColumnDefinitions>
+
+        <!-- Seitenleiste -->
+        <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <!-- Logo: Polarstern über zwei roten Lichtbögen (wie Assets\Borealis.ico) -->
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,24,0,30">
+                    <Viewbox Width="36" Height="36">
+                        <Canvas Width="48" Height="48">
+                            <Path Data="M24,4 L27,13 L36,16 L27,19 L24,28 L21,19 L12,16 L21,13 Z" Fill="{DynamicResource Text}" />
+                            <Path Data="M6,40 Q24,26 42,40" Stroke="{DynamicResource Accent}" StrokeThickness="3.5"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                            <Path Data="M12,45 Q24,36 36,45" Stroke="{DynamicResource Accent}" StrokeThickness="3.5" Opacity="0.55"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        </Canvas>
+                    </Viewbox>
+                    <TextBlock Text="BOREALIS" FontSize="19" FontWeight="Bold" Margin="10,2,0,0" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="22,0,12,20">
+                    <Ellipse x:Name="ServiceDot" Width="9" Height="9" Fill="{DynamicResource TextMute}" VerticalAlignment="Center" />
+                    <TextBlock x:Name="ServiceText" Text="Verbinde …" Foreground="{DynamicResource TextDim}" FontSize="12" Margin="10,0,0,0"
+                               VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="170" />
+                </StackPanel>
+                <StackPanel>
+                    <RadioButton x:Name="NavSync" Style="{StaticResource NavItem}" Content="Borealis Sync" Tag="{StaticResource IconSync}" IsChecked="True" Checked="Nav_Checked" />
+                    <RadioButton x:Name="NavDevices" Style="{StaticResource NavItem}" Content="Geräte" Tag="{StaticResource IconDevices}" Checked="Nav_Checked" />
+                    <RadioButton x:Name="NavFan" Style="{StaticResource NavItem}" Content="Lüftersteuerung" Tag="{StaticResource IconFan}" Checked="Nav_Checked" />
+                    <RadioButton x:Name="NavSettings" Style="{StaticResource NavItem}" Content="Einstellungen" Tag="{StaticResource IconSettings}" Checked="Nav_Checked" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- Inhalt -->
+        <DockPanel Grid.Column="1" Margin="32,24,28,22">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,22">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="SaveState" Foreground="{DynamicResource TextMute}" FontSize="12" VerticalAlignment="Center" Margin="0,0,14,0" />
+                    <Path Data="{StaticResource IconProfile}" Stroke="{DynamicResource TextDim}" StrokeThickness="1.6" Width="18" Height="18"
+                          Stretch="Uniform" Margin="0,0,8,0" StrokeLineJoin="Round" />
+                    <ComboBox x:Name="ProfileBox" Width="200" SelectionChanged="ProfileBox_SelectionChanged" />
+                    <Button x:Name="NewProfileButton" Style="{StaticResource IconButton}" Content="{StaticResource IconPlus}" Margin="8,0,0,0"
+                            ToolTip="Neues Profil" Click="NewProfileButton_Click" />
+                </StackPanel>
+                <TextBlock x:Name="PageTitle" Style="{StaticResource PageTitle}" Text="Borealis Sync" />
+            </DockPanel>
+            <Border DockPanel.Dock="Bottom" x:Name="MessageBar" Visibility="Collapsed" Background="{DynamicResource Bg2}" BorderBrush="{DynamicResource Warn}"
+                    BorderThickness="1" CornerRadius="4" Padding="12,8" Margin="0,14,0,0">
+                <TextBlock x:Name="MessageText" TextWrapping="Wrap" />
+            </Border>
+            <ContentControl x:Name="PageHost" Focusable="False" />
+        </DockPanel>
+    </Grid>
+</Window>
+

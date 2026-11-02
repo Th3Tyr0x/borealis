@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Borealis.Core</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- Signierte PawnIO-Module (PawnIO.Modules 0.2.11, unverändert, LGPL-2.1) -->
+  <ItemGroup>
+    <EmbeddedResource Include="Hardware\PawnIO\LpcIO.bin" LogicalName="PawnIO.LpcIO.bin" />
+    <EmbeddedResource Include="Hardware\PawnIO\AMDFamily17.bin" LogicalName="PawnIO.AMDFamily17.bin" />
+    <EmbeddedResource Include="Hardware\PawnIO\SmbusPIIX4.bin" LogicalName="PawnIO.SmbusPIIX4.bin" />
+    <None Include="Hardware\PawnIO\COPYING" CopyToOutputDirectory="PreserveNewest" Link="PawnIO-Module-LICENSE.txt" />
+  </ItemGroup>
+
+</Project>
