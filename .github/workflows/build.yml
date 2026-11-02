@@ -1,0 +1,38 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: src/global.json
+
+      - name: Build app and service
+        shell: pwsh
+        run: ./setup/build.ps1
+
+      - name: Effect self-test (no hardware needed)
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:RUNNER_TEMP 'effecttest.txt'
+          $p = Start-Process ./dist/Borealis/Borealis.exe -ArgumentList '--effecttest', "`"$out`"" -PassThru -Wait
+          if (-not (Test-Path $out)) { throw "Self-test wrote no result (exit $($p.ExitCode))." }
+          $result = Get-Content $out -Raw
+          Write-Host $result
+          if ($result -notmatch 'ohne Fehler') { throw 'Self-test failed.' }
+
+      - name: Service starts
+        shell: pwsh
+        run: ./dist/Borealis/Borealis.Service.exe --version
