@@ -18,6 +18,21 @@
 Borealis replaces ASUS Armoury Crate for lighting and fans. A small tray app for settings and a Windows service that
 does the work in the background – no ads, no account, no cloud.
 
+<p align="center"><img src="docs/images/effects.png" width="860" alt="Borealis effects page with effect tiles and color wheel"></p>
+
+<table>
+  <tr>
+    <td><img src="docs/images/sync-devices.png" alt="Sync devices: motherboard, ARGB headers and memory in Borealis Sync"></td>
+    <td><img src="docs/images/fan-control.png" alt="Fan control with a curve from auto tuning"></td>
+    <td><img src="docs/images/color-matching.png" alt="Color matching per zone"></td>
+  </tr>
+  <tr>
+    <td align="center">Sync devices</td>
+    <td align="center">Fan curves</td>
+    <td align="center">Color matching</td>
+  </tr>
+</table>
+
 ## Features
 
 - **Lighting:** motherboard zones, addressable ARGB headers and memory modules; firmware and custom software effects
@@ -88,6 +103,7 @@ License: [GNU General Public License v3.0](LICENSE) (or later). Third-party comp
 
 Borealis ersetzt für Beleuchtung und Lüfter die ASUS-Software Armoury Crate. Eine kleine Tray-App für die
 Einstellungen, ein Windows-Dienst für die Arbeit im Hintergrund – keine Werbung, kein Konto, keine Cloud.
+Bilder der Oberfläche siehe oben; die App gibt es auch auf Deutsch (Einstellungen → Sprache).
 
 ### Funktionen
 
