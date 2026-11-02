@@ -1,11 +1,12 @@
-﻿# Erzeugt das Programmsymbol src\Borealis.App\Assets\Borealis.ico (Polarstern über zwei roten Lichtbögen auf
-# dunkler Kachel) in allen Windows-Größen. Kleine Größen bekommen dickere Linien, damit sie lesbar bleiben.
+﻿# Creates the app icon src\Borealis.App\Assets\Borealis.ico in all Windows sizes; small sizes get thicker lines.
+# Run with Windows PowerShell 5.1 (WPF for drawing): powershell -File tools\make_icon.ps1
+# Erzeugt das Programmsymbol src\Borealis.App\Assets\Borealis.ico in allen Windows-Größen; kleine bekommen dickere Linien.
 # Aufruf mit Windows PowerShell 5.1 (WPF zum Zeichnen): powershell -File tools\make_icon.ps1
 param(
     [string]$Output = (Join-Path $PSScriptRoot '..\src\Borealis.App\Assets\Borealis.ico'),
-    # Optional: Vorschau aller Größen auf hellem und dunklem Grund als PNG
+    # Optional: preview of all sizes on light and dark as PNG / Vorschau aller Größen auf hell und dunkel als PNG
     [string]$Preview,
-    # Kleines Bild für den Installer (64 px, PNG)
+    # Small installer image (64 px, PNG) / Kleines Bild für den Installer
     [string]$WizardImage = (Join-Path $PSScriptRoot '..\setup\wizard-small.png')
 )
 
@@ -22,7 +23,7 @@ $red = Brush '#FF1F44'
 $redSoft = Brush '#94192F'   # Rot zu 55 % auf der Kachel, wie die zweite Linie in der Seitenleiste
 
 function Render([int]$size) {
-    # Linienstärke im 48er-Raster: klein dicker
+    # Line width on the 48 grid: thicker when small / Linienstärke im 48er-Raster: klein dicker
     $arc = if ($size -le 20) { 6.5 } elseif ($size -le 32) { 5 } else { 3.75 }
     $visual = New-Object System.Windows.Media.DrawingVisual
     $dc = $visual.RenderOpen()
@@ -52,7 +53,7 @@ function Render([int]$size) {
 $sizes = 16, 20, 24, 32, 40, 48, 64, 128, 256
 $images = foreach ($s in $sizes) { , (Render $s) }
 
-# ICO: Kopf, ein Eintrag je Größe, dann die PNG-Daten (PNG-Einträge versteht Windows ab Vista)
+# ICO: header, one entry per size, then PNG data (PNG entries since Vista) / Kopf, ein Eintrag je Größe, dann PNG-Daten
 $out = New-Object System.IO.MemoryStream
 $w = New-Object System.IO.BinaryWriter $out
 $w.Write([uint16]0); $w.Write([uint16]1); $w.Write([uint16]$sizes.Count)

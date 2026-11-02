@@ -1,6 +1,7 @@
 namespace Borealis.Core.Diagnostics;
 
-/// <summary>Einfaches Datei-Log unter <c>C:\ProgramData\Borealis\logs</c>, eine Datei pro Tag und Programm.</summary>
+/// <summary>Simple file log in <c>C:\ProgramData\Borealis\logs</c>, one file per day and program.
+/// Einfaches Datei-Log in <c>C:\ProgramData\Borealis\logs</c>, eine Datei pro Tag und Programm.</summary>
 public static class Log
 {
     static readonly object Gate = new();
@@ -9,7 +10,8 @@ public static class Log
     public static string Directory { get; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "Borealis", "logs");
 
-    /// <summary>Auch auf die Konsole schreiben (Dienst im Vordergrund, CLI).</summary>
+    /// <summary>Also write to the console (service in foreground, CLI).
+    /// Auch auf die Konsole schreiben (Dienst im Vordergrund, CLI).</summary>
     public static bool ToConsole { get; set; }
 
     public static void Init(string programName) => program = programName;

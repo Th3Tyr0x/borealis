@@ -7,8 +7,8 @@ using Borealis.Core.Ipc;
 namespace Borealis.Service;
 
 /// <summary>
-/// Named-Pipe-Server für die Tray-App. Angemeldete Benutzer dürfen lesen und schreiben, damit die App ohne
-/// Administratorrechte läuft; Verbindungen werden nacheinander bedient.
+/// Named pipe server for the tray app. Signed-in users may read and write so the app runs without admin; connections are served one at a time.
+/// Named-Pipe-Server für die Tray-App. Angemeldete Benutzer dürfen lesen und schreiben, damit die App ohne Admin läuft; Verbindungen nacheinander.
 /// </summary>
 sealed class PipeServer(BorealisRuntime runtime)
 {

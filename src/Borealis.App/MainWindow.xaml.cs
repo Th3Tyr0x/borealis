@@ -11,16 +11,18 @@ using Borealis.Core.Localization;
 namespace Borealis.App;
 
 /// <summary>
-/// Hauptfenster: Seitenleiste (Borealis Sync, Geräte, Lüftersteuerung, Einstellungen), Profilauswahl oben rechts.
-/// Änderungen gehen sofort an den Dienst (siehe <see cref="AppState"/>).
+/// Main window: sidebar (Borealis Sync, devices, fan control, settings), profile picker top right; changes go straight to the service.
+/// Hauptfenster: Seitenleiste (Borealis Sync, Geräte, Lüfter, Einstellungen), Profilauswahl oben rechts; Änderungen gehen sofort an den Dienst.
 /// </summary>
 public partial class MainWindow : Window
 {
-    /// <summary>Nur beim Beenden der App wirklich schließen, sonst ins Tray verstecken.</summary>
+    /// <summary>Really close only when the app exits, otherwise hide to the tray.
+    /// Nur beim Beenden wirklich schließen, sonst ins Tray verstecken.</summary>
     public bool AllowClose { get; set; }
 
     static AppState S => AppState.Instance;
-    /// <summary>Für den Screenshot-Modus: Geräteseite direkt ansteuern.</summary>
+    /// <summary>Screenshot mode: open a device page directly.
+    /// Screenshot-Modus: Geräteseite direkt öffnen.</summary>
     internal Views.DevicesPage Devices { get; private set; } = null!;
     internal Views.LightingPage Lighting { get; private set; } = null!;
     readonly Dictionary<RadioButton, IPage> pages;
@@ -58,7 +60,8 @@ public partial class MainWindow : Window
             else heartbeat.Stop();
         };
         SourceInitialized += (_, _) => UseThemeTitleBar(this);
-        // Ein ersetztes Fenster (Sprache/Farbschema gewechselt) darf nicht weiter auf Änderungen reagieren
+        // A replaced window (language/theme change) must stop reacting to changes
+        // Ein ersetztes Fenster (Sprache/Farbschema) darf nicht mehr auf Änderungen reagieren
         Closed += (_, _) =>
         {
             S.Reloaded -= OnReloaded;
@@ -68,13 +71,16 @@ public partial class MainWindow : Window
         if (S.Status != null) OnReloaded();
     }
 
-    /// <summary>Kennung der offenen Seite (Name des Navigationspunkts), z. B. „NavFan“.</summary>
+    /// <summary>Key of the open page (nav item name), e.g. "NavFan".
+    /// Kennung der offenen Seite (Name des Navigationspunkts), z. B. „NavFan“.</summary>
     public string CurrentPage => pages.FirstOrDefault(p => p.Value == PageHost.Content).Key?.Name ?? NavSync.Name;
 
-    /// <summary>Einstellungsseite neu aufbauen (z. B. nachdem die Update-Prüfung eine neue Version gefunden hat).</summary>
+    /// <summary>Rebuild the settings page (e.g. after the update check found a new version).
+    /// Einstellungsseite neu aufbauen (z. B. wenn die Update-Prüfung eine neue Version fand).</summary>
     public void RefreshSettings() => pages[NavSettings].Rebuild();
 
-    /// <summary>Seite über ihre Kennung öffnen (nach dem Neuaufbau des Fensters).</summary>
+    /// <summary>Open a page by its key (after rebuilding the window).
+    /// Seite über ihre Kennung öffnen (nach dem Neuaufbau des Fensters).</summary>
     public void SelectPage(string name)
     {
         if (FindName(name) is RadioButton rb) rb.IsChecked = true;
@@ -143,15 +149,17 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(name)) await S.CreateAsync(name);
     }
 
+    // Title bar matching the theme (Windows 11: DWMWA_USE_IMMERSIVE_DARK_MODE = 20, DWMWA_CAPTION_COLOR = 35)
     // Titelleiste passend zum Farbschema (Windows 11: DWMWA_USE_IMMERSIVE_DARK_MODE = 20, DWMWA_CAPTION_COLOR = 35)
-    /// <summary>Titelleiste passend zum Farbschema (auch für Dialoge).</summary>
+    /// <summary>Title bar matching the theme (also for dialogs).
+    /// Titelleiste passend zum Farbschema (auch für Dialoge).</summary>
     internal static void UseThemeTitleBar(Window window)
     {
         var hwnd = new WindowInteropHelper(window).Handle;
         bool light = UiPrefs.Current.IsLight;
         int dark = light ? 0 : 1;
         DwmSetWindowAttribute(hwnd, 20, ref dark, sizeof(int));
-        int caption = light ? 0x00F9F7F7 : 0x00161212; // 0x00BBGGRR = #F7F7F9 bzw. #121216 (Seitenleiste)
+        int caption = light ? 0x00F9F7F7 : 0x00161212; // 0x00BBGGRR = #F7F7F9 or #121216 (sidebar) / bzw. (Seitenleiste)
         DwmSetWindowAttribute(hwnd, 35, ref caption, sizeof(int));
     }
 

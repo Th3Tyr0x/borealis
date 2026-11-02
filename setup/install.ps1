@@ -1,8 +1,7 @@
-﻿# Installiert Borealis aus dist\Borealis nach "C:\Program Files\Borealis" (Administrator):
-#  - Dienst BorealisService (LocalSystem, startet mit Windows, Neustart nach Absturz)
-#  - Tray-App startet bei der Anmeldung des ausführenden Benutzers (HKCU\...\Run, abschaltbar in den Einstellungen)
-# Einstellungen und Profile in C:\ProgramData\Borealis bleiben erhalten. Ein laufender Borealis-Dienst oder eine
-# laufende App (auch aus einem Entwicklungsordner) wird vorher beendet.
+﻿# Installs Borealis from dist\Borealis to "C:\Program Files\Borealis" (admin): service and tray app autostart.
+# Settings and profiles in C:\ProgramData\Borealis are kept; a running service or app is stopped first.
+# Installiert Borealis aus dist\Borealis nach "C:\Program Files\Borealis" (Admin): Dienst und Autostart der App.
+# Einstellungen und Profile in C:\ProgramData\Borealis bleiben; laufender Dienst oder App wird vorher beendet.
 param(
     [string]$Source = (Join-Path $PSScriptRoot '..\dist\Borealis'),
     [string]$Target = (Join-Path $env:ProgramFiles 'Borealis'),
@@ -18,7 +17,8 @@ try {
     $Source = [IO.Path]::GetFullPath($Source)
     if (-not (Test-Path (Join-Path $Source 'Borealis.Service.exe'))) { throw "Kein Build in $Source (erst setup\build.ps1 ausführen)." }
 
-    # Alte Instanzen beenden: installierter Dienst, Testbetrieb-Dienst, App
+    # Stop old instances: installed service, test service, app
+    # Alte Instanzen beenden: installierter Dienst, Testdienst, App
     if (Get-Service BorealisService -ErrorAction SilentlyContinue) {
         Say 'Vorhandenen Dienst anhalten ...'
         Stop-Service BorealisService -Force -ErrorAction SilentlyContinue
@@ -36,7 +36,8 @@ try {
 
     $run = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
     Set-ItemProperty $run -Name Borealis -Value ('"{0}" --minimized' -f (Join-Path $Target 'Borealis.exe'))
-    # Ohne diesen Eintrag zeigt der Task-Manager die App nicht unter „Autostart-Apps“ (02 = aktiviert)
+    # Without this entry Task Manager hides the app from startup apps (02 = enabled)
+    # Ohne diesen Eintrag fehlt die App im Task-Manager unter Autostart (02 = an)
     $approved = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run'
     if (-not (Test-Path $approved)) { New-Item $approved | Out-Null }
     Set-ItemProperty $approved -Name Borealis -Type Binary -Value ([byte[]](2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))

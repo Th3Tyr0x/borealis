@@ -10,8 +10,8 @@ using Borealis.Core.Profiles;
 namespace Borealis.App.Views;
 
 /// <summary>
-/// Reiter „Farbabgleich“: Verstärkung von Rot, Grün und Blau sowie Kanalreihenfolge je Zone, damit alle Geräte
-/// dieselbe Farbe gleich zeigen. Der Abgleich-Modus zeigt dazu eine Referenzfarbe auf allen Geräten.
+/// "Color calibration" tab: red/green/blue gain and channel order per zone so all devices show the same color.
+/// Reiter „Farbabgleich“: Verstärkung von Rot/Grün/Blau und Kanalreihenfolge je Zone, damit alle Geräte gleich aussehen.
 /// </summary>
 sealed class CalibrationView : UserControl
 {
@@ -26,13 +26,14 @@ sealed class CalibrationView : UserControl
 
     static (string Kind, string Name)[] Devices => [("Mainboard", Loc.T("Mainboard", "Motherboard")), ("Argb", "Addressable LED Strip"), ("Ram", Loc.T("Arbeitsspeicher", "Memory"))];
 
-    // Über Neuaufbauten hinweg (Seitenwechsel) merken
+    // Kept across rebuilds (page changes) / Bleibt über Neuaufbauten erhalten
     static Rgb reference = Rgb.White;
     static readonly Dictionary<string, bool> linked = new();
 
     Dictionary<string, ZoneCalibration> cal = new();
     bool previewOn;
-    /// <summary>Seit dem Öffnen des Reiters etwas geändert oder den Abgleich-Modus benutzt.</summary>
+    /// <summary>Something changed or calibration mode was used since the tab opened.
+    /// Seit dem Öffnen des Reiters geändert oder Abgleich-Modus benutzt.</summary>
     bool touched;
     readonly List<Action> refreshSent = [];
 
@@ -85,7 +86,8 @@ sealed class CalibrationView : UserControl
         Content = Ui.Scroll(root);
     }
 
-    /// <summary>Beim Verlassen des Reiters: Abgleich-Modus beenden und den Standby-Effekt mit dem neuen Abgleich schreiben.</summary>
+    /// <summary>On leaving the tab: end calibration mode and write the standby effect with the new calibration.
+    /// Beim Verlassen: Abgleich-Modus beenden und den Standby-Effekt mit dem neuen Abgleich schreiben.</summary>
     public void Leave()
     {
         if (!previewOn && !touched) return;
@@ -181,7 +183,7 @@ sealed class CalibrationView : UserControl
                 linked[kind] = linkSwitch.IsChecked == true;
                 if (linked[kind])
                 {
-                    // Werte der ersten Zone für alle übernehmen
+                    // Copy the first zone's values to all / Werte der ersten Zone für alle übernehmen
                     var first = Get(zones[0].Id);
                     foreach (var z in zones.Skip(1)) Set(z.Id, first.Clone());
                     Send();
@@ -203,7 +205,8 @@ sealed class CalibrationView : UserControl
         return section;
     }
 
-    /// <summary>Regler für eine Zone oder (verknüpft) mehrere Zonen mit gleichen Werten.</summary>
+    /// <summary>Sliders for one zone or several linked zones with equal values.
+    /// Regler für eine Zone oder mehrere verknüpfte Zonen mit gleichen Werten.</summary>
     FrameworkElement ZoneCard(string title, List<Core.Ipc.ZoneInfo> zones)
     {
         var value = Get(zones[0].Id).Clone();
@@ -233,6 +236,7 @@ sealed class CalibrationView : UserControl
         panel.Children.Add(ChannelRow("G", Color.FromRgb(0x4A, 0xE0, 0x6A), value.Green, v => { value.Green = v; Changed(); }));
         panel.Children.Add(ChannelRow("B", Color.FromRgb(0x4A, 0x8A, 0xFF), value.Blue, v => { value.Blue = v; Changed(); }));
 
+        // Channel order only for USB zones; the RAM controller sorts itself
         // Kanalreihenfolge nur für USB-Zonen; der RAM-Controller sortiert selbst
         if (zones.All(z => z.Kind != "Ram"))
         {
@@ -284,7 +288,7 @@ sealed class CalibrationView : UserControl
             text.Text = $"{(int)e.NewValue} %";
             set((int)e.NewValue);
         };
-        // Doppelklick setzt den Kanal auf 100 % zurück
+        // Double-click resets the channel to 100 % / Doppelklick setzt den Kanal auf 100 % zurück
         slider.MouseDoubleClick += (_, _) => slider.Value = 100;
         return row;
     }

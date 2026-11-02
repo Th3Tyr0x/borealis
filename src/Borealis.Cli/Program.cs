@@ -1,5 +1,5 @@
-﻿// borealis – Kommandozeilenwerkzeug für die Borealis-Beleuchtung (Phase 1: Licht-Kern testen).
-// Läuft als Administrator (Manifest) und im MTA (Standard für Konsolen-Apps), damit die ENE-RAM-HAL funktioniert.
+﻿// borealis – command-line tool for testing the lighting core. Runs as admin (manifest) and MTA (needed by the ENE RAM HAL).
+// borealis – Kommandozeilenwerkzeug zum Testen des Licht-Kerns. Läuft als Admin (Manifest) und im MTA (für die ENE-RAM-HAL).
 using System.Globalization;
 using Borealis.Core.Lighting;
 using Borealis.Core.Windows;
@@ -173,7 +173,8 @@ static class Program
         return 0;
     }
 
-    // Fragt den laufenden Borealis-Dienst über die Named Pipe ab (nur lesend)
+    // Queries the running service over the named pipe (read-only)
+    // Fragt den laufenden Dienst über die Named Pipe ab (nur lesend)
     static int BorealisServiceStatus()
     {
         var r = new Borealis.Core.Ipc.PipeClient().SendAsync(new Borealis.Core.Ipc.PipeRequest()).GetAwaiter().GetResult();

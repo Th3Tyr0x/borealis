@@ -1,6 +1,7 @@
-﻿# Baut Borealis (setup\build.ps1) und daraus den Installer dist\Borealis-Setup-<Version>.exe mit Inno Setup 7.
-# Inno Setup muss installiert sein (jrsoftware.org; hier per Benutzer unter %LOCALAPPDATA%\Programs\Inno Setup 7).
-# Mit -CertThumbprint werden Programmdateien, Installer und Deinstaller signiert (setup\sign.ps1).
+﻿# Builds Borealis and the installer dist\Borealis-Setup-<version>.exe with Inno Setup 7 (must be installed).
+# -CertThumbprint signs program files, installer and uninstaller (setup\sign.ps1).
+# Baut Borealis und den Installer dist\Borealis-Setup-<Version>.exe mit Inno Setup 7 (muss installiert sein).
+# -CertThumbprint signiert Programmdateien, Installer und Deinstaller (setup\sign.ps1).
 param(
     [switch]$SkipBuild,
     [string]$CertThumbprint,
@@ -19,6 +20,7 @@ if (-not $iscc) { throw 'Inno Setup 7 (ISCC.exe) nicht gefunden.' }
 
 $arguments = @('/Qp')
 if ($CertThumbprint) {
+    # Inno Setup calls the sign script for setup and uninstaller; $f = file to sign
     # Inno Setup ruft das Signier-Skript für Setup und Deinstaller auf; $f = zu signierende Datei
     $sign = Join-Path $PSScriptRoot 'sign.ps1'
     $untrusted = if ($AllowUntrusted) { ' -AllowUntrusted' } else { '' }

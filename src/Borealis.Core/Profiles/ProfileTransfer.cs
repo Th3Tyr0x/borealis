@@ -5,9 +5,10 @@ using Borealis.Core.Localization;
 namespace Borealis.Core.Profiles;
 
 /// <summary>
-/// Beleuchtungsprofil als Datei weitergeben (<c>*.borealis.json</c>): ein kleiner Umschlag mit Format und Version um das
-/// Profil, damit fremde JSON-Dateien und spätere Formate erkannt werden. Lüfter, Farbabgleich und Zonennamen gehören
-/// nicht dazu, sie hängen an der eigenen Hardware.
+/// Lighting profile as a file (<c>*.borealis.json</c>): a small envelope with format and version, so foreign JSON and later
+/// formats are recognized. Fans, calibration and zone names are left out, they depend on the own hardware.
+/// Beleuchtungsprofil als Datei (<c>*.borealis.json</c>): ein kleiner Umschlag mit Format und Version, damit fremde JSON-Dateien
+/// und spätere Formate erkannt werden. Lüfter, Farbabgleich und Zonennamen fehlen, sie hängen an der eigenen Hardware.
 /// </summary>
 public static class ProfileTransfer
 {
@@ -26,7 +27,8 @@ public static class ProfileTransfer
     public static string Export(LightingProfile profile) =>
         JsonSerializer.Serialize(new Envelope { Format = FormatName, Version = FormatVersion, Profile = profile.Clone() }, ProfileStore.Json);
 
-    /// <summary>Profil aus einer exportierten Datei lesen und prüfen; <see cref="InvalidDataException"/> mit Begründung, wenn sie nicht passt.</summary>
+    /// <summary>Read and validate an exported profile; <see cref="InvalidDataException"/> with a reason if it doesn't fit.
+    /// Exportiertes Profil lesen und prüfen; <see cref="InvalidDataException"/> mit Begründung, wenn es nicht passt.</summary>
     public static LightingProfile Import(string path)
     {
         var info = new FileInfo(path);

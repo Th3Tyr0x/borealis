@@ -8,14 +8,16 @@ public enum ServiceState { NotInstalled = 0, Stopped = 1, StartPending = 2, Stop
 public enum ServiceStartType { Boot = 0, System = 1, Automatic = 2, Manual = 3, Disabled = 4 }
 
 /// <summary>
-/// Windows-Dienste abfragen, starten, stoppen und umkonfigurieren (advapi32, ohne NuGet-Pakete).
-/// Wird für den ASUS-LightingService gebraucht, der sonst in die eigene Ausgabe hineinstreamt (§1.9).
+/// Query, start, stop and reconfigure Windows services (advapi32, no NuGet). Needed for the ASUS LightingService, which would stream into our output (§1.9).
+/// Windows-Dienste abfragen, starten, stoppen, umkonfigurieren (advapi32, ohne NuGet). Nötig für den ASUS-LightingService, der sonst dazwischen streamt (§1.9).
 /// </summary>
 public static class ServiceControl
 {
-    /// <summary>Der ASUS-Dienst, der Aura-Effekte streamt.</summary>
+    /// <summary>The ASUS service that streams lighting effects.
+    /// Der ASUS-Dienst, der Lichteffekte streamt.</summary>
     public const string AsusLightingService = "LightingService";
-    /// <summary>Der ASUS-Lüfterdienst; er schreibt beim Start seine Kurven in den Lüfter-Chip (§2.3).</summary>
+    /// <summary>The ASUS fan service; writes its curves to the fan chip at start (§2.3).
+    /// Der ASUS-Lüfterdienst; schreibt beim Start seine Kurven in den Chip (§2.3).</summary>
     public const string AsusFanService = "AsusFanControlService";
 
     public static ServiceState GetState(string name)
@@ -42,7 +44,8 @@ public static class ServiceControl
         finally { Marshal.FreeHGlobal(buf); }
     }
 
-    /// <summary>Stoppt den Dienst und wartet, bis er steht. Gibt false zurück, wenn er nicht installiert ist.</summary>
+    /// <summary>Stops the service and waits until it has stopped; false if not installed.
+    /// Stoppt den Dienst und wartet, bis er steht; false, wenn er nicht installiert ist.</summary>
     public static bool Stop(string name, int timeoutMs = 20000)
     {
         using var scm = OpenScm(Native.SC_MANAGER_CONNECT);
@@ -89,12 +92,13 @@ public static class ServiceControl
             throw new Win32Exception();
     }
 
-    /// <summary>Legt einen Dienst (eigener Prozess, LocalSystem) an oder aktualisiert Pfad und Starttyp eines vorhandenen.</summary>
+    /// <summary>Creates a service (own process, LocalSystem) or updates path and start type of an existing one.
+    /// Legt einen Dienst an (eigener Prozess, LocalSystem) oder aktualisiert Pfad und Starttyp.</summary>
     public static void Install(string name, string displayName, string description, string binaryPath, ServiceStartType startType)
     {
         using var scm = OpenScm(Native.SC_MANAGER_CONNECT | Native.SC_MANAGER_CREATE_SERVICE);
         string quoted = binaryPath.StartsWith('"') ? binaryPath : $"\"{binaryPath}\"";
-        // SERVICE_START: nötig, um Neustart nach Absturz als Fehleraktion einzutragen
+        // SERVICE_START: needed to set restart-on-crash as failure action / nötig, um Neustart nach Absturz einzutragen
         var svc = TryOpen(scm, name, Native.SERVICE_CHANGE_CONFIG | Native.SERVICE_START);
         if (svc == null)
         {
@@ -110,6 +114,7 @@ public static class ServiceControl
         {
             var desc = new Native.SERVICE_DESCRIPTION { lpDescription = description };
             Native.ChangeServiceConfig2(svc, Native.SERVICE_CONFIG_DESCRIPTION, ref desc);
+            // Restart after a crash (after 5 s, 5 s, 30 s); the counter resets after a day
             // Nach einem Absturz neu starten (nach 5 s, 5 s, 30 s); der Zähler beginnt nach einem Tag neu
             var actions = new Native.SC_ACTION[]
             {
@@ -127,7 +132,8 @@ public static class ServiceControl
         }
     }
 
-    /// <summary>Stoppt und entfernt einen Dienst. Gibt false zurück, wenn er nicht installiert ist.</summary>
+    /// <summary>Stops and removes a service; false if not installed.
+    /// Stoppt und entfernt einen Dienst; false, wenn er nicht installiert ist.</summary>
     public static bool Uninstall(string name)
     {
         if (!Stop(name)) return false;

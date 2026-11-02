@@ -2,15 +2,15 @@ namespace Borealis.Core.Lighting;
 
 public enum ZoneKind { Mainboard, Argb, Ram }
 
-/// <summary>
-/// Eine einzeln einfärbbare Beleuchtungszone. USB-Zonen sind Units des Controllers, RAM-Zonen ENE-Module.
-/// </summary>
+/// <summary>A separately colorable lighting zone; USB zones are controller units, RAM zones ENE modules.
+/// Eine einzeln einfärbbare Zone; USB-Zonen sind Units des Controllers, RAM-Zonen ENE-Module.</summary>
 public sealed record Zone(string Id, string Name, ZoneKind Kind, int Unit, int ControlChannel, int DirectChannel, int DirectOffset, int LedCount)
 {
     public bool IsUsb => Kind != ZoneKind.Ram;
 }
 
-/// <summary>Ergebnis eines Schreibvorgangs mit Hinweisen für den Benutzer.</summary>
+/// <summary>Result of a write with hints for the user.
+/// Ergebnis eines Schreibvorgangs mit Hinweisen für den Benutzer.</summary>
 public sealed class ApplyResult
 {
     public List<string> Notes { get; } = [];
@@ -18,15 +18,16 @@ public sealed class ApplyResult
 }
 
 /// <summary>
-/// Beleuchtung des ganzen Systems auf Zonenebene: Mainboard, ARGB-Header (USB-Controller) und RAM (SMBus über
-/// PawnIO, sonst ENE-HAL).
-/// Zonen-IDs: <c>mb1..mbN</c>, <c>argb1..argbN</c>, <c>ram1..ramN</c>; Gruppen <c>mb</c>, <c>argb</c>, <c>ram</c>, <c>usb</c>, <c>all</c>.
+/// System-wide lighting per zone: motherboard, ARGB headers (USB controller) and RAM (SMBus via PawnIO, else ENE HAL).
+/// Beleuchtung des ganzen Systems je Zone: Mainboard, ARGB-Header (USB-Controller) und RAM (SMBus über PawnIO, sonst ENE-HAL).
+/// Zone IDs / Zonen-IDs: <c>mb1..mbN</c>, <c>argb1..argbN</c>, <c>ram1..ramN</c>; groups / Gruppen <c>mb</c>, <c>argb</c>, <c>ram</c>, <c>usb</c>, <c>all</c>.
 /// </summary>
 public sealed class LightingEngine : IDisposable
 {
     public UsbLedController Usb { get; }
     public IRamLights? Ram { get; }
-    /// <summary>Warum der RAM nicht verfügbar ist (null, wenn verfügbar oder nicht angefordert).</summary>
+    /// <summary>Why RAM is unavailable (null if available or not requested).
+    /// Warum der RAM nicht verfügbar ist (null, wenn verfügbar oder nicht angefordert).</summary>
     public string? RamError { get; }
     public IReadOnlyList<UsbLedUnit> Units { get; }
     public IReadOnlyList<Zone> Zones { get; }
@@ -40,7 +41,8 @@ public sealed class LightingEngine : IDisposable
         Zones = BuildZones(units, usb.ReadChannels(), ram);
     }
 
-    /// <summary>Öffnet Controller und (optional) RAM und liest die Topologie. RAM nur aus einem MTA-Thread.</summary>
+    /// <summary>Opens the controller and optionally RAM and reads the topology; RAM only from an MTA thread.
+    /// Öffnet Controller und optional RAM und liest die Topologie; RAM nur aus einem MTA-Thread.</summary>
     public static LightingEngine Open(bool withRam = true)
     {
         var usb = UsbLedController.Open();
@@ -51,7 +53,8 @@ public sealed class LightingEngine : IDisposable
             string? ramError = null;
             if (withRam)
             {
-                // Erst selbst über SMBus (PawnIO); findet das keine DIMMs, die ENE-HAL, falls installiert
+                // SMBus via PawnIO first; if no DIMMs are found, the ENE HAL if installed
+                // Erst SMBus über PawnIO; findet das keine DIMMs, die ENE-HAL, falls installiert
                 try { ram = EneSmbusRam.Open(); }
                 catch (Exception ex) when (ex is IOException or TimeoutException) { ramError = ex.Message; }
                 if (ram == null)
@@ -74,6 +77,7 @@ public sealed class LightingEngine : IDisposable
         var zones = new List<Zone>();
         int ControlChannelOf(int unit) => channels.FirstOrDefault(c => c.HasUnit(unit))?.Channel ?? -1;
 
+        // Motherboard units share direct channel 4; each unit is one LED in unit order
         // Mainboard-Units teilen sich Direct-Kanal 4; jede Unit ist eine LED in Unit-Reihenfolge
         int mbOffset = 0, mbNo = 0;
         foreach (var u in units.Where(u => u.Kind == UnitKind.Mainboard))
@@ -81,7 +85,7 @@ public sealed class LightingEngine : IDisposable
             mbNo++;
             string name = u.Location switch
             {
-                // Ort 5 heißt bei ASUS „Back IO“: die I/O-Abdeckung, auf diesem Board das ROG-Logo
+                // Location 5 is "Back IO": the I/O cover, on this board the logo / Ort 5 ist „Back IO“: die I/O-Abdeckung mit dem Logo
                 0x05 => $"ROG-Logo (Back-IO {mbNo})",
                 0x11 => "Mainboard 12-V-RGB-Header",
                 _ => $"Mainboard-Zone {mbNo}",
@@ -102,7 +106,8 @@ public sealed class LightingEngine : IDisposable
         return zones;
     }
 
-    /// <summary>Zone oder Gruppe auflösen; unbekannte Namen werfen.</summary>
+    /// <summary>Resolve a zone or group; unknown names throw.
+    /// Zone oder Gruppe auflösen; unbekannte Namen werfen.</summary>
     public IReadOnlyList<Zone> Resolve(string token)
     {
         var t = token.Trim().ToLowerInvariant();
@@ -124,8 +129,10 @@ public sealed class LightingEngine : IDisposable
     }
 
     /// <summary>
-    /// Firmware-Effekt (bzw. gleichnamiger RAM-Effekt) mit einer Farbe je Zone setzen. Bei USB-Zonen gilt der Effekt
-    /// für den ganzen Steuerkanal und wird im Controller gespeichert; die Farbe je Zone bleibt erhalten.
+    /// Set a firmware effect (or same-named RAM effect) with one color per zone. For USB zones the effect covers the whole
+    /// channel and is stored in the controller; per-zone colors stay.
+    /// Firmware-Effekt (bzw. gleichnamigen RAM-Effekt) mit einer Farbe je Zone setzen. Bei USB-Zonen gilt er für den ganzen
+    /// Kanal und wird im Controller gespeichert; die Farbe je Zone bleibt.
     /// </summary>
     public ApplyResult ApplyEffect(IReadOnlyDictionary<Zone, Rgb> zoneColors, FirmwareEffect effect, byte speed = 0, byte direction = 0)
     {
@@ -134,7 +141,7 @@ public sealed class LightingEngine : IDisposable
         {
             if (group.Key < 0) { result.Note("Zone ohne Steuerkanal übersprungen."); continue; }
             var colors = group.ToDictionary(z => z.Key.Unit, z => Calibrate(z.Key, z.Value));
-            // Wie der HAL: EC 36 nur bei Effekten mit Farbe (§1.5)
+            // Like the HAL: EC 36 only for effects with color (§1.5) / Wie der HAL: EC 36 nur bei Effekten mit Farbe (§1.5)
             Usb.SetEffect(group.Key, effect, direction, speed, FirmwareEffects.UsesColor(effect) ? colors : null);
             var others = Zones.Where(z => z.IsUsb && z.ControlChannel == group.Key && !colors.ContainsKey(z.Unit)).ToList();
             if (others.Count > 0)
@@ -153,8 +160,10 @@ public sealed class LightingEngine : IDisposable
     }
 
     /// <summary>
-    /// Feste Farben im Direct-Modus (nicht gespeichert; nach Neustart gilt wieder der gespeicherte Firmware-Effekt).
-    /// Ein Steuerkanal wird komplett umgeschaltet; nicht angegebene Zonen dieses Kanals werden schwarz.
+    /// Fixed colors in direct mode (not stored; after reboot the stored firmware effect returns). Switches a whole channel;
+    /// zones of that channel not given turn black.
+    /// Feste Farben im Direct-Modus (nicht gespeichert; nach Neustart gilt der gespeicherte Firmware-Effekt). Schaltet den
+    /// ganzen Kanal um; nicht angegebene Zonen dieses Kanals werden schwarz.
     /// </summary>
     public ApplyResult ApplyDirect(IReadOnlyDictionary<Zone, Rgb> zoneColors)
     {
@@ -162,7 +171,8 @@ public sealed class LightingEngine : IDisposable
         var channels = zoneColors.Keys.Where(z => z.IsUsb && z.ControlChannel >= 0).Select(z => z.ControlChannel).Distinct().ToList();
         foreach (var ch in channels) Usb.SetDirectMode(ch);
 
-        // Alle Zonen der umgeschalteten Kanäle neu senden (das Umschalten löscht ihre Puffer, §1.4)
+        // Resend all zones of switched channels (switching clears their buffers, §1.4)
+        // Alle Zonen umgeschalteter Kanäle neu senden (das Umschalten löscht ihre Puffer, §1.4)
         var affected = Zones.Where(z => z.IsUsb && channels.Contains(z.ControlChannel)).ToList();
         foreach (var z in affected.Where(z => !zoneColors.ContainsKey(z)))
             result.Note($"{z.Id} liegt auf demselben Steuerkanal und wird schwarz.");
@@ -189,8 +199,8 @@ public sealed class LightingEngine : IDisposable
     }
 
     /// <summary>
-    /// Effekt nach dem Herunterfahren bzw. im Standby (S3/S5) setzen (§1.7). Nur USB-Zonen; der RAM ist dann aus.
-    /// Wirkt nur, wenn im BIOS die Beleuchtung im Standby erlaubt ist.
+    /// Set the effect after shutdown / in standby (S3/S5, §1.7). USB zones only (RAM is off); needs standby lighting enabled in the BIOS.
+    /// Effekt nach dem Herunterfahren bzw. im Standby (S3/S5, §1.7). Nur USB-Zonen (RAM ist aus); braucht Standby-Licht im BIOS.
     /// </summary>
     public ApplyResult ApplyStandby(IReadOnlyDictionary<Zone, Rgb> zoneColors, FirmwareEffect effect, byte speed = 0, byte direction = 0)
     {
@@ -207,23 +217,26 @@ public sealed class LightingEngine : IDisposable
     }
 
     /// <summary>
-    /// Farbabgleich je Zone (Zonen-ID); wird in jede Farbe eingerechnet, die an die Hardware geht.
-    /// Firmware-Effekte mit eigenen Farben (z. B. Regenbogen als Hardware-Effekt) lassen sich nicht abgleichen.
+    /// Calibration per zone ID, applied to every color sent to the hardware; firmware effects with own colors can't be calibrated.
+    /// Farbabgleich je Zonen-ID, eingerechnet in jede Farbe an die Hardware; Firmware-Effekte mit eigenen Farben nicht abgleichbar.
     /// </summary>
     public IReadOnlyDictionary<string, Profiles.ZoneCalibration> Calibration { get; set; } = new Dictionary<string, Profiles.ZoneCalibration>();
 
     Rgb Calibrate(Zone z, Rgb c) => Calibration.TryGetValue(z.Id, out var cal) && !cal.IsNeutral ? cal.Apply(c) : c;
 
-    // Zuletzt geschriebener Zustand je Gruppe, damit Live-Änderungen (Farbrad ziehen) nur Neues schreiben
+    // Last written state per group, so live changes (wheel drag) only write what's new
+    // Zuletzt geschriebener Zustand je Gruppe, damit Live-Änderungen (Farbrad) nur Neues schreiben
     readonly Dictionary<ZoneKind, string> appliedSignature = new();
     readonly HashSet<int> directChannels = new();
 
     /// <summary>
-    /// Ein Profil anwenden. Gruppen mit Hardware-Effekt werden in den Controller geschrieben; für Gruppen mit
-    /// Software-Effekt wird ein gleichartiger Hardware-Effekt als Startbild gespeichert, der Kanal auf Direct
-    /// geschaltet und die Zone in <paramref name="software"/> eingetragen (die Bilder streamt der Aufrufer).
+    /// Apply a profile. Hardware-effect groups are written to the controller; for software-effect groups a similar hardware
+    /// effect is stored as start image, the channel goes direct and the zone is added to <paramref name="software"/> (caller streams).
+    /// Profil anwenden. Gruppen mit Hardware-Effekt gehen in den Controller; bei Software-Effekt wird ein ähnlicher Hardware-Effekt
+    /// als Startbild gespeichert, der Kanal auf Direct geschaltet und die Zone in <paramref name="software"/> eingetragen (Aufrufer streamt).
     /// </summary>
-    /// <param name="force">Alles neu schreiben (nach Start, Standby, fremdem Zugriff).</param>
+    /// <param name="force">Rewrite everything (after start, standby, foreign access).
+    /// Alles neu schreiben (nach Start, Standby, fremdem Zugriff).</param>
     public ApplyResult ApplyProfile(Profiles.LightingProfile profile, bool includeStandby, LightingOptions options,
         List<SoftwareZone> software, bool force = false)
     {
@@ -239,8 +252,8 @@ public sealed class LightingEngine : IDisposable
             if (zones.Count == 0) continue;
             bool sw = NeedsSoftware(g, options.PreferHardwareEffects);
             var fwEffect = sw ? FallbackEffect(g.Effect) : g.Effect;
-            // Bei Software-Effekten nur bei Effektwechsel neu schreiben: Farbe/Tempo ändert der Stream sofort,
-            // ein erneutes Umschalten des Kanals würde kurz blinken
+            // Software effects: rewrite only on effect change; the stream applies color/speed at once and re-switching would flicker
+            // Software-Effekte: nur bei Effektwechsel neu schreiben; Farbe/Tempo ändert der Stream sofort, Umschalten würde blinken
             var signature = sw
                 ? System.Text.Json.JsonSerializer.Serialize(new { sw, g.Effect })
                 : System.Text.Json.JsonSerializer.Serialize(new { sw, g.Effect, g.SpeedStep, g.Speed, g.Direction, g.ColorMode, g.Colors, g.DefaultColor, g.Color2, brightness,
@@ -248,7 +261,8 @@ public sealed class LightingEngine : IDisposable
             bool changed = !appliedSignature.TryGetValue(kind, out var old) || old != signature;
             if (changed)
             {
-                // Firmware-Farben mit Helligkeit; bei Software-Effekt ist das nur das Bild bis zum ersten Frame/Neustart
+                // Firmware colors with brightness; for software effects only the image until the first frame/reboot
+                // Firmware-Farben mit Helligkeit; bei Software-Effekt nur das Bild bis zum ersten Frame/Neustart
                 var colors = zones.ToDictionary(z => z, z => SoftwareEffects.Scale(g.ColorOf(z.Id), sw ? 1 : brightness));
                 byte speed = FirmwareEffects.SpeedValue(fwEffect, g.FirmwareSpeed);
                 byte dir = (byte)(g.Direction == Profiles.EffectDirection.Left ? 1 : 0);
@@ -287,13 +301,14 @@ public sealed class LightingEngine : IDisposable
         return result;
     }
 
-    /// <summary>Kompatibilität (CLI): nur Hardware-Effekte, Software-Zonen werden nicht gestreamt.</summary>
+    /// <summary>Compatibility (CLI): hardware effects only, software zones aren't streamed.
+    /// Kompatibilität (CLI): nur Hardware-Effekte, Software-Zonen werden nicht gestreamt.</summary>
     public ApplyResult ApplyProfile(Profiles.LightingProfile profile, bool includeStandby) =>
         ApplyProfile(profile, includeStandby, new LightingOptions { PreferHardwareEffects = true }, [], force: true);
 
     /// <summary>
-    /// Wie in Armoury Crate (§5): Statisch mit einer Farbe läuft in der Firmware, alles andere rechnet Borealis.
-    /// Mit „Hardware-Effekte bevorzugen“ nur noch Zufall/Verlauf in Software.
+    /// (§5) Static with one color runs in firmware, everything else is computed; with "Prefer hardware effects" only random/gradient stays in software.
+    /// (§5) Statisch mit einer Farbe läuft in der Firmware, sonst rechnet Borealis; mit „Hardware-Effekte bevorzugen“ nur Zufall/Verlauf in Software.
     /// </summary>
     public static bool NeedsSoftware(Profiles.GroupSetting g, bool preferHardware)
     {
@@ -305,10 +320,12 @@ public sealed class LightingEngine : IDisposable
         return !preferHardware || multiColor || background;
     }
 
-    /// <summary>Hardware-Effekt, der beim Hochfahren gezeigt wird, bis Borealis mit dem Software-Effekt übernimmt.</summary>
+    /// <summary>Hardware effect shown at boot until Borealis takes over with the software effect.
+    /// Hardware-Effekt beim Hochfahren, bis Borealis mit dem Software-Effekt übernimmt.</summary>
     static FirmwareEffect FallbackEffect(FirmwareEffect e) => SoftwareEffects.FirmwareFallback(e);
 
-    /// <summary>Ein berechnetes Bild senden: USB-Zonen als ein Block (§1.9), RAM-Module über die ENE-HAL.</summary>
+    /// <summary>Send a computed frame: USB zones as one block (§1.9), RAM modules separately.
+    /// Berechnetes Bild senden: USB-Zonen als ein Block (§1.9), RAM-Module getrennt.</summary>
     public void StreamSoftwareFrame(IReadOnlyList<(SoftwareZone Zone, Rgb[] Leds)> frame)
     {
         var usbFrame = new List<(int, Rgb[])>();
@@ -324,8 +341,8 @@ public sealed class LightingEngine : IDisposable
     }
 
     /// <summary>
-    /// RAM-Teil eines berechneten Bildes über die ENE-HAL senden. Eigene Sperre statt der USB-Sperre, damit der
-    /// langsamere SMBus-Weg in einem eigenen Thread laufen kann und die ARGB-Bildrate nicht bremst.
+    /// Send the RAM part of a frame. Own lock instead of the USB lock, so the slower SMBus path runs in its own thread without slowing ARGB.
+    /// RAM-Teil eines Bildes senden. Eigene Sperre statt der USB-Sperre, damit der langsamere SMBus-Weg die ARGB-Bildrate nicht bremst.
     /// </summary>
     public void StreamSoftwareRam(IReadOnlyList<(SoftwareZone Zone, Rgb[] Leds)> frame)
     {
@@ -338,8 +355,8 @@ public sealed class LightingEngine : IDisposable
     }
 
     /// <summary>
-    /// LED-Anzahl eines ARGB-Headers im Controller setzen und zurücklesen. Danach die Beleuchtung neu öffnen,
-    /// damit die Zonen die neue Anzahl kennen.
+    /// Set and read back the LED count of an ARGB header, then reopen lighting so the zones know the new count.
+    /// LED-Anzahl eines ARGB-Headers setzen und zurücklesen, dann die Beleuchtung neu öffnen, damit die Zonen sie kennen.
     /// </summary>
     public int SetLedCount(Zone zone, int count)
     {
@@ -352,8 +369,8 @@ public sealed class LightingEngine : IDisposable
     }
 
     /// <summary>
-    /// Zähltest: Header im Direct-Modus mit Markierungen über alle LEDs, die der Controller kennt –
-    /// erste LED grün, jede zehnte weiß, jede fünfte blau, sonst schwach rot. So lässt sich die echte Länge abzählen.
+    /// Count test: first LED green, every tenth white, every fifth blue, others dim red, so the real length can be counted.
+    /// Zähltest: erste LED grün, jede zehnte weiß, jede fünfte blau, sonst schwach rot; so lässt sich die echte Länge abzählen.
     /// </summary>
     public void ShowLedTest(Zone zone)
     {
@@ -365,7 +382,8 @@ public sealed class LightingEngine : IDisposable
         Usb.StreamDirectFrame([(zone.DirectChannel, leds)]);
     }
 
-    /// <summary>ARGB-Zonen einmal über die volle LED-Anzahl schwarz senden (nach Verkleinern der LED-Anzahl).</summary>
+    /// <summary>Send ARGB zones black once over the full LED count (after shrinking it).
+    /// ARGB-Zonen einmal über die volle LED-Anzahl schwarz senden (nach dem Verkleinern).</summary>
     public void ClearArgb(IEnumerable<SoftwareZone> zones)
     {
         var frame = zones.Where(z => z.Zone.Kind == ZoneKind.Argb && z.LedCount < z.Zone.LedCount)
@@ -373,7 +391,7 @@ public sealed class LightingEngine : IDisposable
         if (frame.Count > 0) Usb.StreamDirectFrame(frame);
     }
 
-    // Schützt RAM-Zugriffe (ENE-HAL) unabhängig von der USB-Sperre des Aufrufers
+    // Guards RAM access independent of the caller's USB lock / Schützt RAM-Zugriffe unabhängig von der USB-Sperre des Aufrufers
     readonly object ramGate = new();
     bool disposed;
 
@@ -388,10 +406,12 @@ public sealed class LightingEngine : IDisposable
     }
 }
 
-/// <summary>Zone, die Borealis selbst animiert, mit wirksamer LED-Anzahl und Effekt-Einstellung.</summary>
+/// <summary>Zone animated by Borealis, with effective LED count and effect setting.
+/// Zone, die Borealis selbst animiert, mit wirksamer LED-Anzahl und Effekt-Einstellung.</summary>
 public sealed record SoftwareZone(Zone Zone, int LedCount, Profiles.GroupSetting Setting);
 
-/// <summary>Einstellungen aus <see cref="Profiles.BorealisSettings"/>, die das Anwenden beeinflussen.</summary>
+/// <summary>Settings from <see cref="Profiles.BorealisSettings"/> that affect applying.
+/// Einstellungen aus <see cref="Profiles.BorealisSettings"/>, die das Anwenden beeinflussen.</summary>
 public sealed class LightingOptions
 {
     public bool PreferHardwareEffects { get; init; }

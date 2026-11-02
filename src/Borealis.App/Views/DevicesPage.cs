@@ -11,8 +11,8 @@ using Borealis.Core.Profiles;
 namespace Borealis.App.Views;
 
 /// <summary>
-/// „Geräte“: jedes Gerät einzeln (wie die Geräteseiten in Armoury Crate). Zonen auswählen und einfärben,
-/// Effekt und Geschwindigkeit, Zonennamen, Effekt nach dem Herunterfahren.
+/// "Devices": each device on its own; select and color zones, effect and speed, zone names, effect after shutdown.
+/// „Geräte“: jedes Gerät einzeln; Zonen wählen und einfärben, Effekt und Tempo, Zonennamen, Effekt nach dem Herunterfahren.
 /// </summary>
 sealed class DevicesPage : UserControl, IPage
 {
@@ -29,15 +29,17 @@ sealed class DevicesPage : UserControl, IPage
     ];
 
     string currentKind = "Mainboard";
-    // Reiter der Geräteseite: Beleuchtung, nach dem Herunterfahren, LED-Anzahl (nur ARGB)
+    // Device page tabs: lighting, after shutdown, LED count (ARGB only)
+    // Reiter: Beleuchtung, nach dem Herunterfahren, LED-Anzahl (nur ARGB)
     enum Tab { Lighting, Standby, LedCount }
     Tab tab;
-    // Ausgewählte Zonen je Gerät und Reiter
+    // Selected zones per device and tab / Ausgewählte Zonen je Gerät und Reiter
     readonly Dictionary<string, HashSet<string>> selection = new();
 
     public DevicesPage() => Rebuild();
 
-    /// <summary>Gerät von außen öffnen („Gerätebeleuchtung festlegen“ auf der Sync-Seite).</summary>
+    /// <summary>Open a device from outside ("Set device lighting" on the Sync page).
+    /// Gerät von außen öffnen („Gerätebeleuchtung festlegen“ auf der Sync-Seite).</summary>
     public void Select(string kind, bool ledCountTab = false)
     {
         currentKind = kind;
@@ -107,8 +109,8 @@ sealed class DevicesPage : UserControl, IPage
         }
 
         bool standby = tab == Tab.Standby;
-        // Ist das Gerät in Borealis Sync, zeigt die Seite dessen Effekt. Die erste Änderung hier löst das Gerät aus
-        // Borealis Sync (wie „Gerätebeleuchtung festlegen“ in Armoury Crate); angehakt wird es unter „Sync Geräte“.
+        // A device in Borealis Sync shows the Sync effect; the first edit here takes it out of Sync.
+        // Ein Gerät in Borealis Sync zeigt dessen Effekt; die erste Änderung hier löst es aus Sync.
         bool synced = !standby && S.Profile.IsSynced(d.Group);
         var group = synced ? S.Profile.Resolve().Group(d.Group) : S.Profile.Group(standby ? d.Standby!.Value : d.Group);
         void Detach()
@@ -138,7 +140,8 @@ sealed class DevicesPage : UserControl, IPage
 
         var left = new StackPanel();
         left.Children.Add(Ui.Section(Loc.T("Zonen", "Zones")));
-        // Eine Zeile je Zone: Farbpunkt, Name (Rechtsklick: umbenennen), LED-Anzahl; anklicken wählt aus
+        // One row per zone: color dot, name (right-click: rename), LED count; click selects
+        // Eine Zeile je Zone: Farbpunkt, Name (Rechtsklick: umbenennen), LED-Anzahl; Klick wählt aus
         var zonePanel = new StackPanel();
         foreach (var z in zones)
         {
@@ -149,7 +152,7 @@ sealed class DevicesPage : UserControl, IPage
             var leds = new TextBlock { Text = $"{z.LedCount} LED{(z.LedCount == 1 ? "" : "s")}", Foreground = Ui.Brush("TextMute"), FontSize = 12, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) };
             DockPanel.SetDock(leds, Dock.Right);
             row.Children.Add(leds);
-            // Eigener Name, darunter klein der Name der Zone
+            // Custom name, zone name small below / Eigener Name, darunter klein der Zonenname
             var names = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
             names.Children.Add(new TextBlock { Text = S.LabelOf(z), TextTrimming = TextTrimming.CharacterEllipsis });
             if (S.Labels.ContainsKey(z.Id))
@@ -169,7 +172,8 @@ sealed class DevicesPage : UserControl, IPage
             : Loc.T("Zonen anklicken, um sie auszuwählen; die Farbe rechts gilt für alle ausgewählten Zonen. Rechtsklick benennt eine Zone um.",
                     "Click zones to select them; the color on the right applies to all selected zones. Right-click a zone to rename it."), 0));
 
-        // Ein/Aus für dieses Gerät („Aus“ ist kein Effekt mehr); nach dem Herunterfahren bleibt „Aus“ eine Kachel
+        // On/off for this device ("Off" is no effect); after shutdown "Off" stays a tile
+        // Ein/Aus für dieses Gerät („Aus“ ist kein Effekt); nach dem Herunterfahren bleibt „Aus“ eine Kachel
         bool on = standby || group.Effect != FirmwareEffect.Off;
         if (!standby)
         {
@@ -215,12 +219,12 @@ sealed class DevicesPage : UserControl, IPage
         return panel;
     }
 
-    // ARGB-Header, auf dem gerade der Zähltest läuft
+    // ARGB header currently running the count test / ARGB-Header mit laufendem Zähltest
     string? ledTestZone;
 
     /// <summary>
-    /// Reiter „LED-Anzahl“ (in Armoury Crate „Ansteuerbare Header“): LED-Anzahl je ARGB-Header im Controller setzen,
-    /// mit Zähltest zum Abzählen der tatsächlichen Länge.
+    /// "LED count" tab: set the LED count per ARGB header, with a count test to find the real length.
+    /// Reiter „LED-Anzahl“: LED-Anzahl je ARGB-Header setzen, mit Zähltest zum Abzählen der echten Länge.
     /// </summary>
     FrameworkElement BuildLedCounts()
     {
@@ -320,7 +324,8 @@ sealed class DevicesPage : UserControl, IPage
     }
 
 
-    /// <summary>Rechtsklick auf eine Zone: umbenennen oder den Namen der Zone wiederherstellen.</summary>
+    /// <summary>Right-click on a zone: rename or restore its name.
+    /// Rechtsklick auf eine Zone: umbenennen oder Namen wiederherstellen.</summary>
     ContextMenu ZoneMenu(ZoneInfo z)
     {
         var menu = new ContextMenu();

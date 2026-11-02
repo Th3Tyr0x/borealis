@@ -3,19 +3,18 @@ using Borealis.Core.Lighting;
 namespace Borealis.Core.Profiles;
 
 /// <summary>
-/// Farbabgleich einer Zone: Verstärkung je Farbkanal und Kanalreihenfolge, damit verschiedene Geräte dieselbe
-/// Farbe gleich zeigen (wie die RGB-Header-Kalibrierung in Armoury Crate, aber für alle Zonen).
+/// Zone calibration: gain per color channel and channel order, so different devices show the same color alike.
+/// Farbabgleich einer Zone: Verstärkung je Farbkanal und Kanalreihenfolge, damit verschiedene Geräte dieselbe Farbe gleich zeigen.
 /// </summary>
 public sealed class ZoneCalibration
 {
-    /// <summary>Rot, Grün, Blau in Prozent (0–150, Standard 100).</summary>
+    /// <summary>Red, green, blue in percent (0–150, default 100).
+    /// Rot, Grün, Blau in Prozent (0–150, Standard 100).</summary>
     public int Red { get; set; } = 100;
     public int Green { get; set; } = 100;
     public int Blue { get; set; } = 100;
-    /// <summary>
-    /// Kanalreihenfolge des Geräts, z. B. „GRB“: Ausgang Rot bekommt den Grün-Wert usw. Für falsch verdrahtete
-    /// oder anders sortierte Strips.
-    /// </summary>
+    /// <summary>Device channel order, e.g. "GRB": the red output gets the green value etc. For miswired or differently ordered strips.
+    /// Kanalreihenfolge des Geräts, z. B. „GRB“: Ausgang Rot bekommt den Grün-Wert usw. Für falsch verdrahtete oder anders sortierte Strips.</summary>
     public string Order { get; set; } = "RGB";
 
     public static readonly string[] Orders = ["RGB", "RBG", "GRB", "GBR", "BRG", "BGR"];

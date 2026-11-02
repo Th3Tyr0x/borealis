@@ -3,10 +3,10 @@ using System.Text.RegularExpressions;
 namespace Borealis.Core.Localization;
 
 /// <summary>
-/// Sprache der Oberfläche: Deutsch (Standard) oder Englisch. Texte der App stehen direkt im Code als Paar
-/// <c>Loc.T("Deutsch", "English")</c>. Begriffe aus dem Core und vom Dienst (Effekt-, Modus-, Lüfter- und Zonennamen)
-/// sind deutsch und werden für die Anzeige mit <see cref="Term"/> übersetzt. Der Dienst setzt die Sprache nie; sein
-/// Protokoll bleibt deutsch.
+/// UI language: German (default) or English. App texts are pairs <c>Loc.T("Deutsch", "English")</c>; German terms from Core
+/// and the service (effect, mode, fan and zone names) are translated with <see cref="Term"/>. The service log stays German.
+/// Sprache der Oberfläche: Deutsch (Standard) oder Englisch. App-Texte sind Paare <c>Loc.T("Deutsch", "English")</c>; deutsche
+/// Begriffe aus Core und Dienst (Effekt-, Modus-, Lüfter-, Zonennamen) übersetzt <see cref="Term"/>. Das Dienst-Log bleibt deutsch.
 /// </summary>
 public static class Loc
 {
@@ -14,7 +14,8 @@ public static class Loc
 
     public static string T(string de, string en) => English ? en : de;
 
-    /// <summary>Deutschen Begriff für die Anzeige übersetzen (unbekannte bleiben, wie sie sind).</summary>
+    /// <summary>Translate a German term for display (unknown ones stay as they are).
+    /// Deutschen Begriff für die Anzeige übersetzen (unbekannte bleiben, wie sie sind).</summary>
     public static string Term(string de)
     {
         if (!English || string.IsNullOrEmpty(de)) return de;
@@ -26,27 +27,27 @@ public static class Loc
 
     static readonly Dictionary<string, string> Terms = new()
     {
-        // Effekte
+        // Effects / Effekte
         ["Aus"] = "Off", ["Statisch"] = "Static", ["Atmen"] = "Breathing", ["Blinken"] = "Strobing",
         ["Farbzyklus"] = "Color cycle", ["Regenbogen"] = "Rainbow", ["Komet"] = "Comet", ["Welle"] = "Wave",
         ["Sternennacht"] = "Starry night", ["Atmender Regenbogen"] = "Breathing rainbow", ["Regenbogen-Komet"] = "Rainbow comet",
         ["Feuerwerk"] = "Fireworks", ["Musik"] = "Music", ["Feuer"] = "Fire", ["Farbfluss"] = "Color flow",
         ["Herzschlag"] = "Heartbeat", ["Funkeln"] = "Twinkle",
-        // Effektgruppen
+        // Effect groups / Effektgruppen
         ["Grundeffekte"] = "Basic", ["Bewegung"] = "Motion", ["Lichtspiele"] = "Light shows", ["Reaktiv"] = "Reactive",
-        // Effekt-Einstellungen
+        // Effect settings / Effekt-Einstellungen
         ["Größe"] = "Size", ["Farbe 1"] = "Color 1", ["Farbe 2"] = "Color 2", ["Breite"] = "Width", ["Schweiflänge"] = "Tail length",
         ["Länge"] = "Length", ["Wellenlänge"] = "Wavelength", ["Empfindlichkeit"] = "Sensitivity", ["Niedrig"] = "Low", ["Hoch"] = "High",
         ["Flammenhöhe"] = "Flame height", ["Muster"] = "Pattern",
-        // Musik- und Smart-Modi
+        // Music and smart modes / Musik- und Smart-Modi
         ["Pegel"] = "Level", ["Spektrum"] = "Spectrum", ["Spektrum gespiegelt"] = "Mirrored spectrum", ["Puls"] = "Pulse",
         ["Welle im Takt"] = "Beat wave", ["Lauflicht im Takt"] = "Beat chaser", ["Funken im Takt"] = "Beat sparks",
         ["Tonhöhe"] = "Pitch", ["Drop-Strobo"] = "Drop strobe",
         ["CPU · Farbe"] = "CPU · Color", ["CPU · Balken"] = "CPU · Bar", ["RAM · Farbe"] = "RAM · Color", ["RAM · Balken"] = "RAM · Bar",
-        // Lüftermodi, Lüfter und Temperaturen
+        // Fan modes, fans and temperatures / Lüftermodi, Lüfter und Temperaturen
         ["Leise"] = "Silent", ["Volle Geschwindigkeit"] = "Full speed", ["Benutzerdefiniert"] = "Custom",
         ["Lüfter"] = "Fans", ["Pumpe"] = "Pump", ["CPU-Lüfter"] = "CPU fan", ["AIO-Pumpe"] = "AIO pump", ["CPU-Sockel"] = "CPU socket", ["Mainboard"] = "Motherboard",
-        // Zonen
+        // Zones / Zonen
         ["Mainboard 12-V-RGB-Header"] = "Motherboard 12 V RGB header",
     };
 

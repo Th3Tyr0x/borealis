@@ -4,21 +4,22 @@ using Microsoft.Win32.SafeHandles;
 namespace Borealis.Core.Lighting;
 
 /// <summary>
-/// HID-Transport zum ASUS-RGB-Controller über USB (Report-ID 0xEC, immer 65 Byte, docs/hardware.md §1.1).
-/// Kennt nur Senden, Lesen und Abfragen; die Befehle selbst stehen in <see cref="UsbLedController"/>.
+/// USB HID transport to the RGB controller (report ID 0xEC, always 65 bytes, docs/hardware.md §1.1); commands live in <see cref="UsbLedController"/>.
+/// HID-Transport zum RGB-Controller über USB (Report-ID 0xEC, immer 65 Byte, docs/hardware.md §1.1); die Befehle stehen in <see cref="UsbLedController"/>.
 /// </summary>
 public sealed class UsbLedHid : IDisposable
 {
     public const int ReportSize = 65;
     public const byte ReportId = 0xEC;
 
-    /// <summary>Pfadfilter für den Controller auf diesem Board (ROG STRIX B650E-E, „6K75“).</summary>
+    /// <summary>Path filter for the controller on this board (B650E-E, "6K75").
+    /// Pfadfilter für den Controller auf diesem Board (B650E-E, „6K75“).</summary>
     public const string DefaultPathFilter = "vid_0b05&pid_19af&mi_02";
 
     readonly SafeFileHandle handle;
     readonly FileStream stream;
-    // Systemweite Sperre, die auch die ASUS-HAL nimmt (§1.1). Solange ASUS-Software installiert ist, verhindert
-    // sie, dass Reports zweier Prozesse ineinander laufen.
+    // System-wide lock also taken by the ASUS HAL (§1.1); keeps reports of two processes from interleaving
+    // Systemweite Sperre, die auch die ASUS-HAL nimmt (§1.1); verhindert, dass Reports zweier Prozesse ineinanderlaufen
     readonly Mutex usbMutex;
 
     Task<int>? pendingRead;
@@ -58,7 +59,7 @@ public sealed class UsbLedHid : IDisposable
                 IntPtr detail = Marshal.AllocHGlobal((int)required);
                 try
                 {
-                    // cbSize von SP_DEVICE_INTERFACE_DETAIL_DATA_W unter x64
+                    // cbSize of SP_DEVICE_INTERFACE_DETAIL_DATA_W on x64
                     Marshal.WriteInt32(detail, 8);
                     if (!Native.SetupDiGetDeviceInterfaceDetail(set, ref data, detail, required, out _, IntPtr.Zero)) continue;
                     string? path = Marshal.PtrToStringUni(detail + 4);
@@ -71,7 +72,8 @@ public sealed class UsbLedHid : IDisposable
         return null;
     }
 
-    /// <summary>Nimmt die Sperre <c>Global\asusaurausb</c>. Mit <c>using</c> verwenden.</summary>
+    /// <summary>Takes the lock <c>Global\asusaurausb</c>; use with <c>using</c>.
+    /// Nimmt die Sperre <c>Global\asusaurausb</c>; mit <c>using</c> verwenden.</summary>
     public IDisposable Lock(int timeoutMs = 5000)
     {
         bool taken;
@@ -87,7 +89,8 @@ public sealed class UsbLedHid : IDisposable
         public void Dispose() { if (Interlocked.Exchange(ref done, 1) == 0) m.ReleaseMutex(); }
     }
 
-    /// <summary>Sendet <c>EC</c> + payload, aufgefüllt auf 65 Byte. Bei Fehler wie der HAL einmal wiederholen (§1.1).</summary>
+    /// <summary>Sends <c>EC</c> + payload padded to 65 bytes; retries once on error like the HAL (§1.1).
+    /// Sendet <c>EC</c> + Payload, aufgefüllt auf 65 Byte; bei Fehler wie der HAL einmal wiederholen (§1.1).</summary>
     public void Write(ReadOnlySpan<byte> payload)
     {
         var buf = new byte[ReportSize];
@@ -105,8 +108,8 @@ public sealed class UsbLedHid : IDisposable
     public void Write(params byte[] payload) => Write(payload.AsSpan());
 
     /// <summary>
-    /// Liest, bis eine Antwort kommt, deren Bytes [1..] mit <paramref name="echo"/> beginnen.
-    /// Ein offener Lesevorgang bleibt über Timeouts hinweg bestehen, damit kein Report verloren geht.
+    /// Reads until a reply whose bytes [1..] start with <paramref name="echo"/>; a pending read survives timeouts so no report is lost.
+    /// Liest, bis eine Antwort mit <paramref name="echo"/> ab Byte [1] kommt; ein offener Lesevorgang überdauert Timeouts, damit kein Report verloren geht.
     /// </summary>
     public byte[]? ReadMatching(ReadOnlySpan<byte> echo, int timeoutMs)
     {
@@ -129,7 +132,8 @@ public sealed class UsbLedHid : IDisposable
         }
     }
 
-    /// <summary>Abfrage ohne Index: <c>EC &lt;cmd|0x80&gt;</c>, Antwort mit <c>[1] = cmd</c> (§1.1).</summary>
+    /// <summary>Query without index: <c>EC &lt;cmd|0x80&gt;</c>, reply with <c>[1] = cmd</c> (§1.1).
+    /// Abfrage ohne Index: <c>EC &lt;cmd|0x80&gt;</c>, Antwort mit <c>[1] = cmd</c> (§1.1).</summary>
     public byte[]? Query(byte cmd, int timeoutMs = 2000)
     {
         var deadline = Environment.TickCount64 + timeoutMs;
@@ -143,8 +147,8 @@ public sealed class UsbLedHid : IDisposable
     }
 
     /// <summary>
-    /// Indizierte Abfrage wie die HAL 1.6.1.9 (§1.1): <c>EC cmd idx</c> setzt den Index,
-    /// <c>EC cmd|0x80</c> fordert an, die Antwort wiederholt <c>[1]=cmd, [2]=idx</c>. Alle 30 ms neu.
+    /// Indexed query like HAL 1.6.1.9 (§1.1): <c>EC cmd idx</c> sets the index, <c>EC cmd|0x80</c> requests, the reply repeats <c>[1]=cmd, [2]=idx</c>. Retry every 30 ms.
+    /// Indizierte Abfrage wie HAL 1.6.1.9 (§1.1): <c>EC cmd idx</c> setzt den Index, <c>EC cmd|0x80</c> fordert an, die Antwort wiederholt <c>[1]=cmd, [2]=idx</c>. Alle 30 ms neu.
     /// </summary>
     public byte[]? QueryIndexed(byte cmd, byte idx, int timeoutMs = 2000)
     {

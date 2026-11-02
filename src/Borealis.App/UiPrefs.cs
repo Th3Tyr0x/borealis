@@ -7,26 +7,32 @@ using Microsoft.Win32;
 
 namespace Borealis.App;
 
-/// <summary>Farbschema der Oberfläche; „System“ folgt der Windows-Einstellung für Apps.</summary>
+/// <summary>UI theme; "System" follows the Windows app setting.
+/// Farbschema; „System“ folgt der Windows-Einstellung für Apps.</summary>
 public enum ThemeChoice { System, Dark, Light }
 
 /// <summary>
-/// Einstellungen der Oberfläche je Benutzer (<c>%APPDATA%\Borealis\ui.json</c>): Sprache und Farbschema.
-/// Sie gehören nicht in die Dienst-Einstellungen, weil der Dienst für alle Benutzer läuft.
+/// Per-user UI settings (<c>%APPDATA%\Borealis\ui.json</c>); not in the service settings, which apply to all users.
+/// UI-Einstellungen je Benutzer (<c>%APPDATA%\Borealis\ui.json</c>); nicht in den Dienst-Einstellungen, die für alle gelten.
 /// </summary>
 public sealed record UiPrefs
 {
-    /// <summary>„de“ oder „en“.</summary>
+    /// <summary>"de" or "en".
+    /// „de“ oder „en“.</summary>
     public string Language { get; set; } = "de";
     public ThemeChoice Theme { get; set; } = ThemeChoice.Dark;
-    /// <summary>Beim ersten Start wurde schon gefragt, ob PawnIO eingerichtet werden soll.</summary>
+    /// <summary>PawnIO setup was already offered on first start.
+    /// PawnIO-Einrichtung wurde beim ersten Start schon angeboten.</summary>
     public bool PawnIoAsked { get; set; }
-    /// <summary>Einmal am Tag bei GitHub nachsehen, ob es eine neuere Version gibt (nur nachsehen, kein Download).</summary>
+    /// <summary>Check GitHub once a day for a newer version (check only, no download).
+    /// Einmal am Tag bei GitHub nach einer neueren Version sehen (nur prüfen, kein Download).</summary>
     public bool CheckForUpdates { get; set; } = true;
-    /// <summary>Letzte erfolgreiche Update-Prüfung und die dabei gefundene neueste Version (z. B. „0.2.0“).</summary>
+    /// <summary>Last successful update check and the latest version found (e.g. "0.2.0").
+    /// Letzte erfolgreiche Update-Prüfung und die gefundene neueste Version (z. B. „0.2.0“).</summary>
     public DateTime? LastUpdateCheck { get; set; }
     public string? LatestVersion { get; set; }
-    /// <summary>Für diese Version kam schon ein Hinweis im Infobereich.</summary>
+    /// <summary>A notification was already shown for this version.
+    /// Für diese Version kam schon ein Hinweis.</summary>
     public string? NotifiedVersion { get; set; }
 
     static readonly string FilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Borealis", "ui.json");
@@ -44,7 +50,8 @@ public sealed record UiPrefs
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException) { return FirstStart(); }
     }
 
-    /// <summary>Noch nichts gespeichert: Sprache wie Windows (Deutsch, sonst Englisch).</summary>
+    /// <summary>Nothing saved yet: language like Windows (German, else English).
+    /// Noch nichts gespeichert: Sprache wie Windows (Deutsch, sonst Englisch).</summary>
     static UiPrefs FirstStart() =>
         new() { Language = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "de" ? "de" : "en" };
 
@@ -59,7 +66,8 @@ public sealed record UiPrefs
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
-    /// <summary>Wirksames Farbschema: bei „System“ die Windows-Einstellung „App-Modus“.</summary>
+    /// <summary>Effective theme: for "System" the Windows app mode.
+    /// Wirksames Farbschema: bei „System“ der App-Modus von Windows.</summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public bool IsLight => Theme switch
     {
@@ -78,8 +86,10 @@ public sealed record UiPrefs
         catch (System.Security.SecurityException) { return false; }
     }
 
-    /// <summary>Sprache und Farbschema auf die laufende App anwenden (ohne Fenster neu aufzubauen).</summary>
-    /// <summary>Kultur von Windows beim Start; bleibt für Zahlen und Datum, solange sie zur gewählten Sprache passt.</summary>
+    /// <summary>Apply language and theme to the running app (without rebuilding windows).
+    /// Sprache und Farbschema auf die laufende App anwenden (ohne Fenster neu aufzubauen).</summary>
+    /// <summary>Windows culture at start; kept for numbers and dates while it matches the language.
+    /// Windows-Kultur beim Start; bleibt für Zahlen und Datum, solange sie zur Sprache passt.</summary>
     static readonly CultureInfo SystemCulture = CultureInfo.CurrentCulture;
 
     public static void Apply()

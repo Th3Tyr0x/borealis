@@ -8,7 +8,8 @@ using Borealis.Core.Profiles;
 
 namespace Borealis.App.Views;
 
-/// <summary>Was das Einstellungsfeld bearbeitet: die Borealis-Sync-Einstellung oder eine Gerätegruppe.</summary>
+/// <summary>What the panel edits: the Borealis Sync setting or a device group.
+/// Was das Feld bearbeitet: die Borealis-Sync-Einstellung oder eine Gerätegruppe.</summary>
 interface IEffectTarget
 {
     FirmwareEffect Effect { get; }
@@ -26,9 +27,11 @@ interface IEffectTarget
     int ChangeInterval { get; set; }
     int Transition { get; set; }
     int Mode { get; set; }
-    /// <summary>Alle Effekt-Einstellungen auf Standard (der Effekt selbst bleibt).</summary>
+    /// <summary>Reset all effect settings (the effect stays).
+    /// Alle Effekt-Einstellungen zurücksetzen (der Effekt bleibt).</summary>
     void ResetOptions();
-    /// <summary>False, wenn keine Zone ausgewählt ist (Farbe 1 lässt sich dann nicht setzen).</summary>
+    /// <summary>False if no zone is selected (color 1 can't be set then).
+    /// False, wenn keine Zone gewählt ist (Farbe 1 geht dann nicht).</summary>
     bool CanEditColor1 { get; }
 }
 
@@ -53,7 +56,8 @@ sealed class SyncTarget(SyncSetting s) : IEffectTarget
     public bool CanEditColor1 => true;
 }
 
-/// <summary>Gerätegruppe: Farbe 1 gilt für die ausgewählten Zonen; <paramref name="beforeEdit"/> löst ggf. aus Borealis Sync.</summary>
+/// <summary>Device group: color 1 applies to the selected zones; <paramref name="beforeEdit"/> may leave Borealis Sync.
+/// Gerätegruppe: Farbe 1 gilt für die gewählten Zonen; <paramref name="beforeEdit"/> löst ggf. aus Borealis Sync.</summary>
 sealed class GroupTarget(Func<GroupSetting> group, Func<IReadOnlyCollection<string>> selectedZones, IReadOnlyList<string> zoneOrder, Action beforeEdit) : IEffectTarget
 {
     public FirmwareEffect Effect => group().Effect;
@@ -89,8 +93,10 @@ sealed class GroupTarget(Func<GroupSetting> group, Func<IReadOnlyCollection<stri
 }
 
 /// <summary>
-/// Rechte Spalte der Effekt-Seiten wie in Armoury Crate: Farbmodus, Farben (inkl. Hintergrund), Zufallswechsel,
-/// Geschwindigkeit, Richtung, Größe, Dichte, Helligkeit. Zeigt nur, was der gewählte Effekt kann.
+/// Right column of the effect pages: color mode, colors, random change, speed, direction, size, density, brightness;
+/// shows only what the effect supports.
+/// Rechte Spalte der Effektseiten: Farbmodus, Farben, Zufallswechsel, Tempo, Richtung, Größe, Dichte, Helligkeit;
+/// zeigt nur, was der Effekt kann.
 /// </summary>
 sealed class EffectSettingsPanel : StackPanel
 {
@@ -125,7 +131,8 @@ sealed class EffectSettingsPanel : StackPanel
     Slot editing = Slot.Color1;
     bool loading;
 
-    /// <param name="rebuild">Seite neu aufbauen (nach „Auf Standard zurücksetzen“, damit alle Regler die Standardwerte zeigen).</param>
+    /// <param name="rebuild">Rebuild the page (after a reset, so all sliders show defaults).
+    /// Seite neu aufbauen (nach dem Zurücksetzen, damit alle Regler die Standardwerte zeigen).</param>
     public EffectSettingsPanel(IEffectTarget target, bool firmwareOnly, Action changed, Action? rebuild = null)
     {
         this.target = target;
@@ -133,9 +140,11 @@ sealed class EffectSettingsPanel : StackPanel
         this.changed = changed;
         string id = GetHashCode().ToString();
 
-        // Unterart des Effekts (Musik: Pegel/Spektrum/Puls/Bass, Smart: CPU/RAM …), wird in Refresh() aufgebaut
+        // Effect variant (music: level/spectrum/pulse/bass, smart: CPU/RAM …), built in Refresh()
+        // Unterart des Effekts (Musik: Pegel/Spektrum/Puls/Bass, Smart: CPU/RAM …), aufgebaut in Refresh()
         Children.Add(modeSection);
 
+        // Color: mode, slots (color 1/2, background), wheel, random change
         // Farbe: Modus, Farbplätze (Farbe 1/2, Hintergrund), Farbrad, Zufallswechsel
         colorSection.Children.Add(Ui.Section(Loc.T("Farbe", "Color")));
         modeRow = Ui.Segments([(ColorMode.Single, Loc.T("Einzelfarbe", "Single color")), (ColorMode.Random, Loc.T("Zufall", "Random")), (ColorMode.Gradient, Loc.T("Verlauf", "Gradient"))],
@@ -148,6 +157,7 @@ sealed class EffectSettingsPanel : StackPanel
         slots.Children.Add(slot1);
         slots.Children.Add(slot2);
         slots.Children.Add(slotBg);
+        // Background on/off: off = black; the chosen color stays saved
         // Hintergrund an/aus: aus = schwarz; die gewählte Farbe bleibt gespeichert
         backgroundSwitch.Style = Ui.Style("Switch");
         backgroundSwitch.IsChecked = target.BackgroundEnabled;
@@ -159,7 +169,8 @@ sealed class EffectSettingsPanel : StackPanel
             changed();
         };
         colorSection.Children.Add(backgroundSwitch);
-        // Hintergrund als Farbe oder als gedimmter, wandernder Regenbogen
+        // Background as a color or a dimmed moving rainbow
+        // Hintergrund als Farbe oder gedimmter, wandernder Regenbogen
         var bgMode = Ui.Segments([(false, Loc.T("Farbe", "Color")), (true, Loc.T("Regenbogen", "Rainbow"))], target.BackgroundRainbow, r =>
         {
             if (loading) return;
@@ -210,7 +221,7 @@ sealed class EffectSettingsPanel : StackPanel
         densitySection.Children.Add(SliderRow(Loc.T("Dichte", "Density"), 1, 10, target.Density, v => v.ToString(), v => target.Density = v));
         Children.Add(densitySection);
 
-        // Helligkeit gilt für das ganze Profil
+        // Brightness applies to the whole profile / Helligkeit gilt für das ganze Profil
         brightnessSection.Children.Add(SliderRow(Loc.T("Helligkeit", "Brightness"), 5, 100, S.Profile.Brightness, v => $"{v} %", v => S.Profile.Brightness = v, step: 5));
         Children.Add(brightnessSection);
 
@@ -249,7 +260,8 @@ sealed class EffectSettingsPanel : StackPanel
         return b;
     }
 
-    /// <summary>Überschrift mit Wertanzeige und Schieberegler.</summary>
+    /// <summary>Heading with value display and slider.
+    /// Überschrift mit Wertanzeige und Schieberegler.</summary>
     StackPanel SliderRow(string title, int min, int max, int value, Func<int, string> format, Action<int> set, int step = 1)
     {
         var row = new StackPanel();
@@ -278,7 +290,8 @@ sealed class EffectSettingsPanel : StackPanel
         slotBgDot.Fill = Ui.ToBrush(target.Background);
     }
 
-    /// <summary>Nach Effektwechsel oder geänderter Zonenauswahl aufrufen.</summary>
+    /// <summary>Call after an effect change or a new zone selection.
+    /// Nach Effektwechsel oder neuer Zonenauswahl aufrufen.</summary>
     public void Refresh()
     {
         loading = true;
@@ -293,7 +306,8 @@ sealed class EffectSettingsPanel : StackPanel
         bool showBg = bgOn && !target.BackgroundRainbow;
         if (editing == Slot.Color2 && !showColor2) editing = Slot.Color1;
         if (editing == Slot.Background && !showBg) editing = Slot.Color1;
-        // Bei Zufall gibt es für Farbe 1 nichts zu wählen; dann gleich den Hintergrund bearbeiten
+        // With random there's nothing to pick for color 1, so edit the background
+        // Bei Zufall gibt es für Farbe 1 nichts zu wählen, also gleich den Hintergrund
         if (editing == Slot.Color1 && (!caps.Color || mode == ColorMode.Random) && showBg) editing = Slot.Background;
 
         if (modeEffect != e)
@@ -305,7 +319,7 @@ sealed class EffectSettingsPanel : StackPanel
                 modeSection.Children.Add(Ui.Section(Loc.T("Modus", "Mode")));
                 var row = Ui.Segments(modes.Select((label, i) => (i, Loc.Term(label))), Math.Clamp(target.Mode, 0, modes.Length - 1),
                     m => { if (loading) return; target.Mode = m; changed(); }, "Mode" + GetHashCode() + e);
-                // Vier Modi passen nicht nebeneinander: zwei Zeilen
+                // Four modes don't fit in one row: two rows / Vier Modi passen nicht in eine Zeile: zwei Zeilen
                 var wrap = new WrapPanel();
                 foreach (var child in row.Children.Cast<UIElement>().ToList()) { row.Children.Remove(child); wrap.Children.Add(child); }
                 modeSection.Children.Add(wrap);
@@ -328,7 +342,8 @@ sealed class EffectSettingsPanel : StackPanel
         slot2.IsChecked = editing == Slot.Color2;
         slotBg.IsChecked = editing == Slot.Background;
         UpdateSlots();
-        // Bei Zufall gibt es für Farbe 1 nichts zu wählen (Hintergrund aber schon)
+        // With random there's nothing to pick for color 1 (background still is)
+        // Bei Zufall gibt es für Farbe 1 nichts zu wählen (Hintergrund schon)
         picker.Visibility = editing == Slot.Color1 && (mode == ColorMode.Random || !caps.Color) ? Visibility.Collapsed : Visibility.Visible;
         picker.SetColor(editing switch { Slot.Color2 => target.Color2, Slot.Background => target.Background, _ => target.Color1 });
         picker.IsEnabled = editing != Slot.Color1 || target.CanEditColor1;

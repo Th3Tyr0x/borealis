@@ -8,8 +8,8 @@ using Forms = System.Windows.Forms;
 namespace Borealis.App;
 
 /// <summary>
-/// Tray-Anwendung: Symbol im Infobereich, Fenster bei Doppelklick. Schließen versteckt das Fenster nur;
-/// „Beenden“ im Kontextmenü beendet die App. Die Hardware steuert der Borealis-Dienst.
+/// Tray app: notification area icon, window on double-click; closing only hides it. The service drives the hardware.
+/// Tray-App: Symbol im Infobereich, Fenster per Doppelklick; Schließen versteckt es nur. Die Hardware steuert der Dienst.
 /// </summary>
 public partial class App : Application
 {
@@ -20,8 +20,10 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        // Sprache und Farbschema des Benutzers vor dem ersten Fenster
+        // User language and theme before the first window
+        // Sprache und Farbschema vor dem ersten Fenster
         UiPrefs.Apply();
+        // Dev aid: "--effecttest <file>" renders all effects without hardware
         // Entwicklerhilfe: „--effecttest <datei>“ rechnet alle Effekte ohne Hardware durch
         int et = Array.IndexOf(e.Args, "--effecttest");
         if (et >= 0 && et + 1 < e.Args.Length)
@@ -32,6 +34,7 @@ public partial class App : Application
             Shutdown();
             return;
         }
+        // Dev aid: "--screenshot <folder>" renders all pages as PNG and exits
         // Entwicklerhilfe: „--screenshot <ordner>“ rendert alle Seiten als PNG und beendet sich
         int shot = Array.IndexOf(e.Args, "--screenshot");
         if (shot >= 0 && shot + 1 < e.Args.Length)
@@ -39,6 +42,7 @@ public partial class App : Application
             _ = Screenshots.RenderAsync(e.Args[shot + 1]).ContinueWith(_ => Dispatcher.Invoke(Shutdown));
             return;
         }
+        // Single instance: a second one brings the first window to the front
         // Nur eine Instanz: eine zweite holt das Fenster der ersten nach vorn
         var single = new Mutex(true, @"Local\BorealisTrayApp", out bool first);
         if (!first)
@@ -58,7 +62,8 @@ public partial class App : Application
         exitItem = (Forms.ToolStripMenuItem)menu.Items.Add("", null, (_, _) => ExitApp());
         UpdateTrayTexts();
         tray = new Forms.NotifyIcon { Icon = icon, Text = "Borealis", ContextMenuStrip = menu, Visible = true };
-        // Farbschema „System“: Windows-Umschaltung zwischen hell und dunkel übernehmen
+        // Theme "System": follow Windows light/dark switches
+        // Farbschema „System“: Hell/Dunkel-Wechsel von Windows übernehmen
         SystemEvents.UserPreferenceChanged += (_, args) =>
         {
             if (args.Category == UserPreferenceCategory.General && UiPrefs.Current.Theme == ThemeChoice.System)
@@ -71,7 +76,8 @@ public partial class App : Application
         if (!e.Args.Contains("--minimized"))
         {
             ShowWindow();
-            // Erster Start ohne PawnIO: einmal anbieten, es einzurichten
+            // First start without PawnIO: offer to set it up once
+            // Erster Start ohne PawnIO: einmal die Einrichtung anbieten
             Dispatcher.BeginInvoke(async () => await PawnIoSetup.AskOnFirstStartAsync(window!), System.Windows.Threading.DispatcherPriority.ApplicationIdle);
         }
         else _ = AppState.Instance.RefreshAsync();
@@ -81,8 +87,8 @@ public partial class App : Application
     bool? builtLight;
 
     /// <summary>
-    /// Läuft, solange die App im Infobereich ist: kurz nach dem Start und dann alle 6 Stunden nachsehen (ins Netz geht
-    /// <see cref="UpdateCheck"/> höchstens einmal am Tag). Für jede neue Version gibt es einen Hinweis im Infobereich.
+    /// Checks shortly after start, then every 6 h (network at most once a day); one notification per new version.
+    /// Prüft kurz nach dem Start, dann alle 6 h (Netz höchstens einmal am Tag); je neuer Version ein Hinweis.
     /// </summary>
     async Task WatchForUpdatesAsync()
     {
@@ -116,8 +122,8 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Nach einem Wechsel von Sprache oder Farbschema: anwenden und das Fenster neu aufbauen (die Seiten setzen Texte und
-    /// Farben beim Aufbau). Größe, Lage und die offene Seite bleiben.
+    /// After a language or theme change: apply and rebuild the window, keeping size, position and page.
+    /// Nach Wechsel von Sprache oder Farbschema: anwenden und Fenster neu aufbauen; Größe, Lage und Seite bleiben.
     /// </summary>
     public void RebuildWindow()
     {
@@ -160,10 +166,12 @@ public partial class App : Application
         Shutdown();
     }
 
-    /// <summary>Tray-Symbol: Polarstern über roten Lichtbögen (Assets\Borealis.ico, wie die Seitenleiste).</summary>
+    /// <summary>Tray icon (Assets\Borealis.ico).
+    /// Tray-Symbol (Assets\Borealis.ico).</summary>
     static System.Drawing.Icon CreateIcon()
     {
-        // Gleiches Symbol wie die .exe, in der Größe, die Windows für den Infobereich nimmt
+        // Same icon as the .exe, in the size Windows uses for the tray
+        // Gleiches Symbol wie die .exe, in der Größe für den Infobereich
         using var stream = GetResourceStream(new Uri("pack://application:,,,/Assets/Borealis.ico"))!.Stream;
         return new System.Drawing.Icon(stream, Forms.SystemInformation.SmallIconSize);
     }

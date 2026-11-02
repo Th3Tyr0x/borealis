@@ -3,10 +3,10 @@ using Microsoft.Win32;
 namespace Borealis.App;
 
 /// <summary>
-/// Startet die Tray-App bei der Anmeldung (je Benutzer, <c>HKCU\…\Run</c>, keine Adminrechte nötig). Der Dienst
-/// läuft davon unabhängig; die App ist nur die Oberfläche. Wie Windows-Programme üblich wird der Zustand auch unter
-/// <c>Explorer\StartupApproved\Run</c> geführt: Darüber zeigen Task-Manager und Einstellungen den Eintrag an und
-/// schalten ihn ab (erstes Byte gerade = an, ungerade = vom Benutzer deaktiviert).
+/// Starts the tray app at sign-in (per user, <c>HKCU\…\Run</c>, no admin). The state is mirrored under
+/// <c>Explorer\StartupApproved\Run</c> so Task Manager can show and disable it (even first byte = on).
+/// Startet die Tray-App bei der Anmeldung (je Benutzer, <c>HKCU\…\Run</c>, ohne Admin). Der Zustand steht auch unter
+/// <c>Explorer\StartupApproved\Run</c>, damit der Task-Manager ihn zeigt und abschaltet (erstes Byte gerade = an).
 /// </summary>
 static class Autostart
 {
@@ -17,7 +17,8 @@ static class Autostart
 
     static string Command => $"\"{Environment.ProcessPath}\" --minimized";
 
-    /// <summary>Eingetragen, auf diese Borealis.exe zeigend und nicht im Task-Manager deaktiviert.</summary>
+    /// <summary>Registered, pointing to this Borealis.exe and not disabled in Task Manager.
+    /// Eingetragen, zeigt auf diese Borealis.exe und nicht im Task-Manager deaktiviert.</summary>
     public static bool IsEnabled
     {
         get

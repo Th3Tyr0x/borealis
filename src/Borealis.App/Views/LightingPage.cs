@@ -8,15 +8,16 @@ using Microsoft.Win32;
 namespace Borealis.App.Views;
 
 /// <summary>
-/// „Beleuchtung &amp; Borealis Sync“ : Reiter „Sync Geräte“ (welche Geräte den gemeinsamen Effekt zeigen),
-/// „Borealis-Effekte“ (gemeinsamer Effekt der angehakten Geräte) und „Farbabgleich“ (gleiche Farben auf allen Geräten).
+/// "Lighting &amp; Borealis Sync": tabs "Sync devices", "Borealis effects" (shared effect) and "Color calibration".
+/// „Beleuchtung &amp; Borealis Sync“: Reiter „Sync Geräte“, „Borealis-Effekte“ (gemeinsamer Effekt) und „Farbabgleich“.
 /// </summary>
 sealed class LightingPage : UserControl, IPage
 {
     static AppState S => AppState.Instance;
     public string Title => Loc.T("Beleuchtung & Borealis Sync", "Lighting & Borealis Sync");
 
-    /// <summary>„Gerätebeleuchtung festlegen“ wurde für ein Gerät (Zonenart) angeklickt.</summary>
+    /// <summary>"Set device lighting" was clicked for a device (zone kind).
+    /// „Gerätebeleuchtung festlegen“ wurde für ein Gerät (Zonenart) angeklickt.</summary>
     public event Action<string>? OpenDevice;
 
     readonly ContentControl body = new() { Focusable = false };
@@ -51,8 +52,8 @@ sealed class LightingPage : UserControl, IPage
         root.Children.Add(body);
         Content = root;
         ShowTab();
-        // Änderungen auf der Geräteseite (z. B. Gerät aus Sync gelöst) beim Zurückkehren anzeigen
-        // Abgleich-Modus beim Verlassen der Seite (auch Fenster ins Tray) beenden
+        // Show device page changes (e.g. device left Sync) on return; end calibration mode on leaving (also to tray)
+        // Änderungen der Geräteseite beim Zurückkehren zeigen; Abgleich-Modus beim Verlassen beenden (auch ins Tray)
         IsVisibleChanged += (_, e) =>
         {
             if ((bool)e.NewValue) Rebuild();
@@ -60,7 +61,8 @@ sealed class LightingPage : UserControl, IPage
         };
     }
 
-    /// <summary>Reiter „Farbabgleich“ bzw. „Borealis-Effekte“ öffnen (Bildschirmfotos).</summary>
+    /// <summary>Open the "Color calibration" or "Borealis effects" tab (screenshots).
+    /// Reiter „Farbabgleich“ bzw. „Borealis-Effekte“ öffnen (Bildschirmfotos).</summary>
     internal void ShowCalibration() => calTab.IsChecked = true;
     internal void ShowEffects() => effTab.IsChecked = true;
 
@@ -144,7 +146,8 @@ sealed class LightingPage : UserControl, IPage
         return Ui.Scroll(root);
     }
 
-    /// <summary>Gerätekarte: Symbol, Name, Schalter für Borealis Sync, aktueller Effekt und Verknüpfung zur Geräteseite.</summary>
+    /// <summary>Device card: icon, name, Sync switch, current effect and link to the device page.
+    /// Gerätekarte: Symbol, Name, Sync-Schalter, aktueller Effekt und Link zur Geräteseite.</summary>
     static FrameworkElement DeviceCard(string name, string subtitle, string iconKey, GroupSetting group, bool synced, Action<bool> onToggle, Action onOpenDevice)
     {
         var panel = new StackPanel();
@@ -170,7 +173,7 @@ sealed class LightingPage : UserControl, IPage
         head.Children.Add(toggle);
         panel.Children.Add(head);
 
-        // Aktueller Effekt (gemeinsam oder eigener)
+        // Current effect (shared or own) / Aktueller Effekt (gemeinsam oder eigener)
         bool off = group.Effect == FirmwareEffect.Off;
         var effectRow = new Grid();
         effectRow.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -200,8 +203,8 @@ sealed class LightingPage : UserControl, IPage
     }
 
     /// <summary>
-    /// „Borealis Leistungsmodus“ (wie der Aura-Leistungsmodus in Armoury Crate): Ein/Aus und die Stufe „Flüssigkeit des Lichteffekts“.
-    /// In Borealis bestimmt er die Bildrate der Software-Effekte (8 Bilder/s aus, 12/20/30 je Stufe).
+    /// "Borealis performance mode": on/off and the smoothness level; sets the software effect frame rate (8 fps off, 12/20/30).
+    /// „Borealis Leistungsmodus“: Ein/Aus und Stufe der Flüssigkeit; bestimmt die Bildrate der Software-Effekte (aus 8, sonst 12/20/30 Bilder/s).
     /// </summary>
     static FrameworkElement PerformanceCard()
     {

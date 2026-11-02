@@ -2,13 +2,16 @@ using Borealis.Core.Hardware;
 
 namespace Borealis.Core.Profiles;
 
-/// <summary>Lüftermodus: feste Kurven für alle Lüfter oder eigene Kurven je Lüfter.</summary>
+/// <summary>Fan mode: fixed curves for all fans or custom curves per fan.
+/// Lüftermodus: feste Kurven für alle Lüfter oder eigene Kurven je Lüfter.</summary>
 public enum FanMode { Silent, Standard, Turbo, FullSpeed, Custom }
 
-/// <summary>Temperatur, nach der der Chip einen Lüfter regelt.</summary>
+/// <summary>Temperature the chip regulates a fan by.
+/// Temperatur, nach der der Chip einen Lüfter regelt.</summary>
 public enum FanTempSource { Cpu, Motherboard, CpuSocket }
 
-/// <summary>Kurvenpunkt: ab <see cref="Temp"/> °C läuft der Lüfter mit <see cref="Duty"/> % (dazwischen linear).</summary>
+/// <summary>Curve point: from <see cref="Temp"/> °C the fan runs at <see cref="Duty"/> % (linear between).
+/// Kurvenpunkt: ab <see cref="Temp"/> °C läuft der Lüfter mit <see cref="Duty"/> % (dazwischen linear).</summary>
 public sealed class FanPoint
 {
     public int Temp { get; set; }
@@ -19,39 +22,48 @@ public sealed class FanPoint
 }
 
 /// <summary>
-/// Lüftersteuerung (gilt für alle Beleuchtungsprofile). Borealis schreibt die Kurven in den Lüfter-Chip; der regelt
-/// danach selbst nach der CPU-Temperatur. Solange <see cref="Enabled"/> aus ist, bleibt alles beim ASUS-Lüfterdienst.
+/// Fan control (for all lighting profiles). Borealis writes the curves to the fan chip, which then regulates on its own;
+/// while <see cref="Enabled"/> is off, the ASUS fan service stays in charge.
+/// Lüftersteuerung (für alle Beleuchtungsprofile). Borealis schreibt die Kurven in den Lüfter-Chip, der dann selbst regelt;
+/// solange <see cref="Enabled"/> aus ist, bleibt alles beim ASUS-Lüfterdienst.
 /// </summary>
 public sealed class FanSettings
 {
-    /// <summary>Borealis steuert die Lüfter; der ASUS-Lüfterdienst wird dafür angehalten.</summary>
+    /// <summary>Borealis controls the fans; the ASUS fan service is stopped for it.
+    /// Borealis steuert die Lüfter; der ASUS-Lüfterdienst wird dafür angehalten.</summary>
     public bool Enabled { get; set; }
-    /// <summary>ASUS-Lüfterdienst zusätzlich auf „Deaktiviert“ stellen, damit Armoury Crate ihn nicht neu startet.</summary>
+    /// <summary>Also set the ASUS fan service to "Disabled" so it isn't restarted.
+    /// ASUS-Lüfterdienst zusätzlich auf „Deaktiviert“ stellen, damit er nicht neu startet.</summary>
     public bool DisableAsusFanService { get; set; }
     public FanMode Mode { get; set; } = FanMode.Standard;
-    /// <summary>Eigene Kurven je Lüfter (Kennung wie „CPUFAN“), je vier Punkte; gilt im Modus <see cref="FanMode.Custom"/>.</summary>
+    /// <summary>Custom curves per fan (ID like "CPUFAN"), four points each; used in <see cref="FanMode.Custom"/>.
+    /// Eigene Kurven je Lüfter (Kennung wie „CPUFAN“), je vier Punkte; gilt im Modus <see cref="FanMode.Custom"/>.</summary>
     public Dictionary<string, List<FanPoint>> Curves { get; set; } = new();
-    /// <summary>Messwerte des Auto-Tunings je Lüfter (Kennung wie „CPUFAN“).</summary>
+    /// <summary>Auto-tuning results per fan (ID like "CPUFAN").
+    /// Messwerte des Auto-Tunings je Lüfter (Kennung wie „CPUFAN“).</summary>
     public Dictionary<string, FanTuning> Tuning { get; set; } = new();
     /// <summary>
-    /// Eigene Anpassungen der festen Profile je Lüfter: Modus („Silent“, „Standard“, „Turbo“) → Lüfter → vier Punkte.
-    /// Fehlt ein Eintrag, gilt die berechnete Kurve (<see cref="Preset(FanMode, FanHeader, FanTuning?)"/>).
+    /// Custom tweaks of the fixed modes per fan: mode ("Silent", "Standard", "Turbo") → fan → four points.
+    /// Without an entry the computed curve applies (<see cref="Preset(FanMode, FanHeader, FanTuning?)"/>).
+    /// Eigene Anpassungen der festen Modi je Lüfter: Modus („Silent“, „Standard“, „Turbo“) → Lüfter → vier Punkte.
+    /// Ohne Eintrag gilt die berechnete Kurve (<see cref="Preset(FanMode, FanHeader, FanTuning?)"/>).
     /// </summary>
     public Dictionary<string, Dictionary<string, List<FanPoint>>> ProfileCurves { get; set; } = new();
-    /// <summary>Temperaturquelle je Lüfter (Kennung wie „SYSFAN“); fehlt = CPU wie bei ASUS.</summary>
+    /// <summary>Temperature source per fan (ID like "SYSFAN"); missing = CPU, as with ASUS.
+    /// Temperaturquelle je Lüfter (Kennung wie „SYSFAN“); fehlt = CPU wie bei ASUS.</summary>
     public Dictionary<string, FanTempSource> Sources { get; set; } = new();
 
     public const int MinTemp = 20, MaxTemp = 95;
 
-    /// <summary>
-    /// Der CPU-Lüfter regelt immer nach der CPU: Nach der Mainboard-Temperatur würde er unter Last zu langsam laufen.
-    /// </summary>
+    /// <summary>The CPU fan always follows the CPU; by motherboard temperature it would run too slow under load.
+    /// Der CPU-Lüfter regelt immer nach der CPU; nach der Mainboard-Temperatur liefe er unter Last zu langsam.</summary>
     public static bool CanChooseSource(FanHeader fan) => fan.Id != "CPUFAN";
 
     public FanTempSource SourceFor(FanHeader fan) =>
         CanChooseSource(fan) ? Sources.GetValueOrDefault(fan.Id) : FanTempSource.Cpu;
 
-    /// <summary>Wert für das Quellregister des Lüfter-Chips (CPU = 28, wie der ASUS-Lüfterdienst es eingestellt hat).</summary>
+    /// <summary>Value for the chip's source register (CPU = 28, as set by the ASUS fan service).
+    /// Wert für das Quellregister des Chips (CPU = 28, wie vom ASUS-Lüfterdienst eingestellt).</summary>
     public static TempSource ChipSource(FanTempSource s) => s switch
     {
         FanTempSource.Motherboard => TempSource.Systin,
@@ -59,7 +71,8 @@ public sealed class FanSettings
         _ => TempSource.Peci0Cal,
     };
 
-    /// <summary>Kennung des passenden Messwerts in <see cref="SensorSnapshot.Temperatures"/>.</summary>
+    /// <summary>ID of the matching reading in <see cref="SensorSnapshot.Temperatures"/>.
+    /// Kennung des passenden Messwerts in <see cref="SensorSnapshot.Temperatures"/>.</summary>
     public static string SensorId(FanTempSource s) => s switch
     {
         FanTempSource.Motherboard => "systin",
@@ -74,7 +87,8 @@ public sealed class FanSettings
         _ => "CPU",
     };
 
-    /// <summary>Name in der Sprache der Oberfläche.</summary>
+    /// <summary>Name in the UI language.
+    /// Name in der Sprache der Oberfläche.</summary>
     public static string DisplayName(FanMode m) => Localization.Loc.Term(GermanName(m));
 
     public static string GermanName(FanMode m) => m switch
@@ -86,7 +100,8 @@ public sealed class FanSettings
         _ => "Benutzerdefiniert",
     };
 
-    /// <summary>Kurve, die für einen Lüfter gerade gilt.</summary>
+    /// <summary>Curve currently in effect for a fan.
+    /// Kurve, die für einen Lüfter gerade gilt.</summary>
     public List<FanPoint> CurveFor(FanHeader fan)
     {
         if (Mode == FanMode.Custom && Curves.TryGetValue(fan.Id, out var c) && c.Count == 4) return Normalize(c);
@@ -94,15 +109,18 @@ public sealed class FanSettings
         return Preset(Mode, fan, Tuning.GetValueOrDefault(fan.Id));
     }
 
-    /// <summary>Lässt sich die Kurve in diesem Modus je Lüfter anpassen? (Nicht bei „Volle Geschwindigkeit“.)</summary>
+    /// <summary>Can the curve be tweaked per fan in this mode? (Not at "Full speed".)
+    /// Lässt sich die Kurve in diesem Modus je Lüfter anpassen? (Nicht bei „Volle Geschwindigkeit“.)</summary>
     public static bool IsEditable(FanMode mode) => mode != FanMode.FullSpeed;
 
-    /// <summary>Eigene Anpassung des Profils <paramref name="mode"/> für einen Lüfter; null = berechnete Kurve.</summary>
+    /// <summary>Custom tweak of mode <paramref name="mode"/> for a fan; null = computed curve.
+    /// Eigene Anpassung des Modus <paramref name="mode"/> für einen Lüfter; null = berechnete Kurve.</summary>
     public List<FanPoint>? ProfileOverride(FanMode mode, string fanId) =>
         mode is FanMode.Custom or FanMode.FullSpeed ? null
         : ProfileCurves.TryGetValue(mode.ToString(), out var m) && m.TryGetValue(fanId, out var c) && c.Count == 4 ? c : null;
 
-    /// <summary>Kurve eines Lüfters im aktuellen Modus setzen (Benutzerdefiniert bzw. Anpassung des Profils).</summary>
+    /// <summary>Set a fan's curve in the current mode (custom or mode tweak).
+    /// Kurve eines Lüfters im aktuellen Modus setzen (Benutzerdefiniert bzw. Anpassung).</summary>
     public void SetCurve(string fanId, List<FanPoint> curve)
     {
         if (Mode == FanMode.Custom) { Curves[fanId] = Normalize(curve); return; }
@@ -111,34 +129,38 @@ public sealed class FanSettings
         m[fanId] = Normalize(curve);
     }
 
-    /// <summary>Kurve eines Lüfters im aktuellen Modus zurücksetzen (Profil: berechnete Kurve; Benutzerdefiniert: Standard).</summary>
+    /// <summary>Reset a fan's curve in the current mode (mode: computed curve; custom: default).
+    /// Kurve eines Lüfters im aktuellen Modus zurücksetzen (Modus: berechnete Kurve; Benutzerdefiniert: Standard).</summary>
     public void ResetCurve(FanHeader fan)
     {
         if (Mode == FanMode.Custom) Curves[fan.Id] = Preset(FanMode.Standard, fan, Tuning.GetValueOrDefault(fan.Id));
         else if (ProfileCurves.TryGetValue(Mode.ToString(), out var m)) m.Remove(fan.Id);
     }
 
-    /// <summary>Wurde die feste Kurve dieses Lüfters aus dem Auto-Tuning berechnet?</summary>
+    /// <summary>Was this fan's fixed curve computed from auto-tuning?
+    /// Wurde die feste Kurve dieses Lüfters aus dem Auto-Tuning berechnet?</summary>
     public static bool IsTuned(FanMode mode, FanTuning? tuning) =>
         mode is not (FanMode.FullSpeed or FanMode.Custom) && tuning != null && tuning.Rpm.Length >= 11 && tuning.MaxRpm > 0;
 
     /// <summary>
-    /// Feste Kurve nach dem Auto-Tuning, aufgebaut wie die Profile, die Armoury Crate nach seiner Kalibrierung erzeugt
-    /// (docs/hardware.md §2.5):
+    /// Fixed curve after auto-tuning, built like the profiles ASUS creates after its calibration (docs/hardware.md §2.5).
+    /// Feste Kurve nach dem Auto-Tuning, aufgebaut wie die Profile, die ASUS nach seiner Kalibrierung erzeugt (docs/hardware.md §2.5).
     /// <list type="bullet">
-    /// <item>Der erste Punkt liegt auf der kleinsten sinnvollen Leistung des Lüfters: sicher laufen bzw. anlaufen, und bei
-    /// Lüftern, die nie stehen bleiben, die Leistung, ab der sie über ihre Grunddrehzahl hinaus schneller werden.</item>
-    /// <item>Die Modi verschieben die Kurve über die Temperatur (Leise später, Turbo früher) und zielen in der Mitte auf
-    /// einen Anteil der gemessenen Höchstdrehzahl; die Leistung dafür kommt aus der Messtabelle.</item>
-    /// <item>Pumpe: jeder Modus mit eigener Kurve – „Leise“ am stärksten gedrosselt, „Standard“ leicht, „Turbo“ fast voll
-    /// (nie unter 50 %).</item>
+    /// <item>First point at the lowest useful duty: safe running/start, or for fans that never stop, where they get faster than idle.
+    /// Erster Punkt bei der kleinsten sinnvollen Leistung: sicher laufen/anlaufen, bei Lüftern ohne Stillstand ab wann sie schneller werden.</item>
+    /// <item>Modes shift the curve in temperature (Silent later, Turbo earlier) and aim mid-curve at a share of the measured max RPM.
+    /// Die Modi verschieben die Kurve über die Temperatur (Leise später, Turbo früher) und zielen mittig auf einen Anteil der Höchstdrehzahl.</item>
+    /// <item>Pump: own curve per mode, Silent throttled most, Standard slightly, Turbo almost full (never below 50 %).
+    /// Pumpe: eigene Kurve je Modus, Leise am stärksten gedrosselt, Standard leicht, Turbo fast voll (nie unter 50 %).</item>
     /// </list>
+    /// Without measurement the fixed curves of <see cref="Preset(FanMode, FanHeader)"/> apply.
     /// Ohne Messung gelten die festen Kurven aus <see cref="Preset(FanMode, FanHeader)"/>.
     /// </summary>
     public static List<FanPoint> Preset(FanMode mode, FanHeader fan, FanTuning? tuning)
     {
         if (!IsTuned(mode, tuning)) return Normalize(Preset(mode, fan));
         var t = tuning!;
+        // Temperatures and share of max RPM per point; 0 = lowest useful duty
         // Temperaturen und Anteil der Höchstdrehzahl je Punkt; 0 = kleinste sinnvolle Leistung
         (int[] temps, int[] share) = (fan.Pump, mode) switch
         {
@@ -158,8 +180,8 @@ public sealed class FanSettings
     }
 
     /// <summary>
-    /// Feste Kurven der Modi ohne Messung. Die Pumpe hat je Modus eine eigene Kurve (Leise gedrosselt, Standard leicht,
-    /// Turbo fast voll); erst „Volle Geschwindigkeit“ läuft immer voll.
+    /// Fixed mode curves without measurement; the pump has its own per mode (Silent throttled, Standard slightly, Turbo almost full).
+    /// Feste Kurven der Modi ohne Messung; die Pumpe hat je Modus eine eigene (Leise gedrosselt, Standard leicht, Turbo fast voll).
     /// </summary>
     public static List<FanPoint> Preset(FanMode mode, FanHeader fan)
     {
@@ -180,9 +202,8 @@ public sealed class FanSettings
     }
 
     /// <summary>
-    /// Kurve in sichere Form bringen: vier Punkte, Temperaturen 20–95 °C aufsteigend (mindestens 1 °C Abstand),
-    /// Leistung 0–100 % und nicht fallend, letzter Punkt immer 100 % (wie im ASUS-Dienst). Über dem letzten Punkt läuft
-    /// der Lüfter damit sicher voll.
+    /// Make a curve safe: four points, temperatures 20–95 °C rising (≥ 1 °C apart), duty 0–100 % not falling, last point 100 %.
+    /// Kurve sicher machen: vier Punkte, Temperaturen 20–95 °C steigend (≥ 1 °C Abstand), Leistung 0–100 % nicht fallend, letzter Punkt 100 %.
     /// </summary>
     public static List<FanPoint> Normalize(IReadOnlyList<FanPoint> points)
     {
@@ -199,7 +220,8 @@ public sealed class FanSettings
         return p;
     }
 
-    /// <summary>Leistung bei einer Temperatur (wie der Chip zwischen den Punkten rechnet, linear).</summary>
+    /// <summary>Duty at a temperature (linear between points, like the chip).
+    /// Leistung bei einer Temperatur (linear zwischen den Punkten, wie der Chip).</summary>
     public static int DutyAt(IReadOnlyList<FanPoint> c, double temp)
     {
         if (temp <= c[0].Temp) return c[0].Duty;
@@ -220,24 +242,31 @@ public sealed class FanSettings
     };
 }
 
-/// <summary>Ergebnis des Auto-Tunings für einen Lüfter.</summary>
+/// <summary>Auto-tuning result for one fan.
+/// Ergebnis des Auto-Tunings für einen Lüfter.</summary>
 public sealed class FanTuning
 {
     public DateTime Time { get; set; }
-    /// <summary>Drehzahl in gleichen Leistungsstufen von 0 bis 100 % (21 Werte = 5-%-Stufen; ältere Läufe 11 Werte).</summary>
+    /// <summary>RPM at equal duty steps 0–100 % (21 values = 5 % steps; older runs 11).
+    /// Drehzahl in gleichen Leistungsstufen 0–100 % (21 Werte = 5-%-Stufen; ältere Läufe 11).</summary>
     public int[] Rpm { get; set; } = [];
-    /// <summary>Kleinste Leistung, bei der der Lüfter noch sicher weiterläuft (0 = bleibt nie stehen).</summary>
+    /// <summary>Lowest duty at which the fan keeps running (0 = never stops).
+    /// Kleinste Leistung, bei der der Lüfter sicher weiterläuft (0 = bleibt nie stehen).</summary>
     public int MinDuty { get; set; }
-    /// <summary>Drehzahl bei <see cref="MinDuty"/>.</summary>
+    /// <summary>RPM at <see cref="MinDuty"/>.
+    /// Drehzahl bei <see cref="MinDuty"/>.</summary>
     public int MinDutyRpm { get; set; }
-    /// <summary>Leistung, ab der er aus dem Stand anläuft (0 = bleibt nie stehen).</summary>
+    /// <summary>Duty at which it starts from standstill (0 = never stops).
+    /// Leistung, ab der er aus dem Stand anläuft (0 = bleibt nie stehen).</summary>
     public int StartDuty { get; set; }
 
     [System.Text.Json.Serialization.JsonIgnore] public int MaxRpm => Rpm.Length > 0 ? Rpm.Max() : 0;
-    /// <summary>Untergrenze für feste Kurven: anlaufen und weiterlaufen sicher, plus 5 % Reserve.</summary>
+    /// <summary>Lower limit for fixed curves: safe start and run, plus 5 % margin.
+    /// Untergrenze für feste Kurven: sicher anlaufen und weiterlaufen, plus 5 % Reserve.</summary>
     [System.Text.Json.Serialization.JsonIgnore] public int SafeDuty => MinDuty == 0 && StartDuty == 0 ? 0 : Math.Min(100, Math.Max(MinDuty, StartDuty) + 5);
 
-    /// <summary>Geschätzte Drehzahl bei einer Leistung (zwischen den Messpunkten linear).</summary>
+    /// <summary>Estimated RPM at a duty (linear between measurements).
+    /// Geschätzte Drehzahl bei einer Leistung (linear zwischen den Messpunkten).</summary>
     public int RpmAt(int duty)
     {
         if (Rpm.Length < 2) return 0;
@@ -247,9 +276,10 @@ public sealed class FanTuning
     }
 
     /// <summary>
-    /// Für Lüfter, die nie stehen bleiben: Leistung, ab der sie deutlich über ihre Grunddrehzahl (bei 0 %) hinaus schneller
-    /// werden – darunter bringt weniger Leistung nichts (ASUS: „mindutytokeepruning“ 13 % beim CPU-Lüfter). 0 bei Lüftern,
-    /// die stehen bleiben können (dort gilt <see cref="MinDuty"/>/<see cref="StartDuty"/>).
+    /// For fans that never stop: duty above which they clearly exceed their idle RPM (below, less duty does nothing;
+    /// ASUS uses 13 % for the CPU fan). 0 for fans that can stop (then <see cref="MinDuty"/>/<see cref="StartDuty"/> apply).
+    /// Für Lüfter ohne Stillstand: Leistung, ab der sie deutlich über ihre Grunddrehzahl kommen (darunter bringt weniger nichts;
+    /// ASUS nimmt 13 % beim CPU-Lüfter). 0 bei Lüftern, die stehen können (dann gelten <see cref="MinDuty"/>/<see cref="StartDuty"/>).
     /// </summary>
     [System.Text.Json.Serialization.JsonIgnore]
     public int EffectiveDuty
@@ -262,7 +292,8 @@ public sealed class FanTuning
         }
     }
 
-    /// <summary>Kleinste Leistung, bei der laut Messung mindestens <paramref name="rpm"/> U/min erreicht werden (linear zwischen den Stufen).</summary>
+    /// <summary>Lowest duty that reaches at least <paramref name="rpm"/> RPM per measurement (linear between steps).
+    /// Kleinste Leistung, die laut Messung mindestens <paramref name="rpm"/> U/min erreicht (linear zwischen den Stufen).</summary>
     public int DutyForRpm(int rpm)
     {
         if (Rpm.Length < 2) return 100;

@@ -1,12 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Helles Farbschema: helle Flächen, rote Akzente -->
+    <!-- Light theme: light surfaces, red accents / Helles Schema: helle Flächen, rote Akzente -->
     <Color x:Key="Bg0Color">#EBEBEF</Color>
     <Color x:Key="Bg1Color">#F7F7F9</Color>
     <Color x:Key="Bg2Color">#FFFFFF</Color>
     <Color x:Key="Bg3Color">#E6E6EB</Color>
-    <!-- Rahmen kräftiger als im dunklen Schema: auf Weiß verschwinden helle Grautöne -->
+    <!-- Stronger borders than dark: light grays vanish on white / Kräftigere Rahmen: helles Grau verschwindet auf Weiß -->
     <Color x:Key="LineColor">#B9B9C4</Color>
     <Color x:Key="AccentColor">#E3173E</Color>
     <Color x:Key="TextColor">#17171B</Color>
@@ -26,7 +26,7 @@
     <SolidColorBrush x:Key="Warn" Color="#C27400" />
 
     <DropShadowEffect x:Key="AccentGlow" Color="{StaticResource AccentColor}" BlurRadius="18" ShadowDepth="0" Opacity="0.55" />
-    <!-- Leuchten unter dem aktiven Seitenreiter -->
+    <!-- Glow under the active sidebar item / Leuchten unter dem aktiven Seitenreiter -->
     <LinearGradientBrush x:Key="TabGlow" StartPoint="0,1" EndPoint="0,0">
         <GradientStop Color="#33E3173E" Offset="0" />
         <GradientStop Color="#00FFFFFF" Offset="1" />

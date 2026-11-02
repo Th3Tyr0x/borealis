@@ -5,18 +5,18 @@
     <AssemblyName>Borealis</AssemblyName>
     <RootNamespace>Borealis.App</RootNamespace>
     <UseWPF>true</UseWPF>
-    <!-- NotifyIcon für das Tray-Symbol -->
+    <!-- NotifyIcon for the tray icon / für das Tray-Symbol -->
     <UseWindowsForms>true</UseWindowsForms>
-    <!-- Programm- und Fenstersymbol; erzeugt mit tools\make_icon.ps1 -->
+    <!-- App and window icon, made with tools\make_icon.ps1 / Programmsymbol, erzeugt mit tools\make_icon.ps1 -->
     <ApplicationIcon>Assets\Borealis.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <!-- Für das Tray-Symbol -->
+    <!-- For the tray icon / Für das Tray-Symbol -->
     <Resource Include="Assets\Borealis.ico" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- WinForms-Namespaces nicht global importieren, sonst kollidieren Application, MessageBox usw. mit WPF -->
+    <!-- No global WinForms usings, they clash with WPF / Keine globalen WinForms-Usings, sie kollidieren mit WPF -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
   </ItemGroup>

@@ -1,7 +1,7 @@
-﻿// Borealis.Service – Hintergrunddienst (LocalSystem): wendet das aktive Beleuchtungsprofil beim Start und nach dem
-// Standby an und nimmt Befehle der Tray-App per Named Pipe entgegen.
-// Aufrufe: ohne Argumente durch den Dienststeuerungs-Manager; „--console“ im Vordergrund (Strg+C beendet);
-// „install“ / „uninstall“ richten den Dienst ein bzw. entfernen ihn (Administrator).
+﻿// Borealis.Service – background service (LocalSystem): applies the active lighting profile at start and after standby,
+// takes tray app commands over a named pipe. No args: run by the SCM; "--console" in the foreground; "install"/"uninstall" (admin).
+// Borealis.Service – Hintergrunddienst (LocalSystem): wendet das aktive Profil beim Start und nach dem Standby an und nimmt
+// Befehle der Tray-App per Named Pipe an. Ohne Argumente: vom SCM; „--console“ im Vordergrund; „install“/„uninstall“ (Admin).
 using Borealis.Core.Diagnostics;
 using Borealis.Core.Windows;
 
@@ -30,7 +30,7 @@ static class Program
                 Log.Info(ServiceControl.Uninstall(ServiceName) ? $"Dienst {ServiceName} entfernt." : $"Dienst {ServiceName} war nicht installiert.");
                 return 0;
             case "--sensors":
-                // Analyse: Rohwerte des Super-I/O und der CPU einmal ausgeben (nur lesend)
+                // Analysis: print raw Super I/O and CPU values once (read-only) / Analyse: Rohwerte von Super-I/O und CPU einmal ausgeben
                 Console.OutputEncoding = System.Text.Encoding.UTF8;
                 try
                 {
@@ -46,17 +46,19 @@ static class Program
                 catch (Exception ex) when (ex is IOException or TimeoutException) { Console.WriteLine("Fehler: " + ex.Message); }
                 return 0;
             case "--version":
-                // Ladetest (z. B. gegen Smart App Control): lädt Borealis.Core und gibt die Version aus
+                // Load test (e.g. Smart App Control): loads Borealis.Core and prints the version
+                // Ladetest (z. B. Smart App Control): lädt Borealis.Core und gibt die Version aus
                 Console.WriteLine($"Borealis.Service {typeof(Program).Assembly.GetName().Version} mit Borealis.Core {typeof(Log).Assembly.GetName().Version}");
                 return 0;
             case "--ramprobe":
+                // Analysis: read RAM lighting over SMBus (ENE addresses 0x70–0x73 only, read-only)
                 // Analyse: RAM-Beleuchtung über SMBus lesen (nur ENE-Adressen 0x70–0x73, nur lesend)
                 Console.OutputEncoding = System.Text.Encoding.UTF8;
                 try { return RamProbe.Run(); }
                 catch (Exception ex) when (ex is IOException or TimeoutException) { Console.WriteLine("Fehler: " + ex.Message); return 1; }
             case "--fantest":
-                // Schreibtest (nur mit Freigabe des Benutzers): Kurve von Gehäuselüfter 1 kurz auf 100 % setzen,
-                // Drehzahl beobachten, Originalkurve exakt zurückschreiben und prüfen
+                // Write test (only with the user's consent): chassis fan 1 briefly to 100 %, watch RPM, restore and verify the original curve
+                // Schreibtest (nur mit Freigabe): Gehäuselüfter 1 kurz auf 100 %, Drehzahl beobachten, Originalkurve exakt zurückschreiben und prüfen
                 Console.OutputEncoding = System.Text.Encoding.UTF8;
                 return FanTest.Run();
             case "--console":

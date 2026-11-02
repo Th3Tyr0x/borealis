@@ -3,25 +3,27 @@ using System.Xml.Linq;
 
 namespace Borealis.Core.Lighting;
 
-/// <summary>RAM-Beleuchtung, gleich über welchen Weg: eigener SMBus-Zugriff (<see cref="EneSmbusRam"/>) oder ENE-HAL.</summary>
+/// <summary>RAM lighting by either path: own SMBus access (<see cref="EneSmbusRam"/>) or the ENE HAL.
+/// RAM-Beleuchtung über einen der Wege: eigener SMBus-Zugriff (<see cref="EneSmbusRam"/>) oder ENE-HAL.</summary>
 public interface IRamLights : IDisposable
 {
     IReadOnlyList<RamModule> Modules { get; }
-    /// <summary>Weg der Ansteuerung, fürs Protokoll.</summary>
+    /// <summary>Access path, for the log.
+    /// Weg der Ansteuerung, fürs Protokoll.</summary>
     string Source { get; }
-    /// <summary>Effekt mit Farben je LED. <see cref="RamEffect.Direct"/> = Farben direkt anzeigen.</summary>
+    /// <summary>Effect with colors per LED; <see cref="RamEffect.Direct"/> = show colors directly.
+    /// Effekt mit Farben je LED; <see cref="RamEffect.Direct"/> = Farben direkt anzeigen.</summary>
     void SetEffect(int module, RamEffect effect, IReadOnlyList<Rgb> colors);
-    /// <summary>Effekt mit einer Farbe für alle LEDs eines Moduls.</summary>
+    /// <summary>Effect with one color for all LEDs of a module.
+    /// Effekt mit einer Farbe für alle LEDs eines Moduls.</summary>
     void SetEffect(int module, RamEffect effect, Rgb color);
 }
 
 public sealed record RamModule(int Index, string Name, int LedCount);
 
 /// <summary>
-/// RAM-Beleuchtung (ENE-Controller auf den DIMMs) über die ENE-HAL <c>ENE_RGB</c>
-/// (<c>C:\Program Files\ENE\Aac_ENE RGB HAL\x64\AacHal_x64.dll</c>, in-proc). Die HAL übernimmt SMBus-Zugriff
-/// und Sperren, ein eigener SMBus-Treiber ist nicht nötig (docs/hardware.md §3.4).
-/// Muss in einem MTA-Thread erzeugt und benutzt werden.
+/// RAM lighting via the in-proc ENE HAL <c>ENE_RGB</c> (<c>AacHal_x64.dll</c>), which handles SMBus and locking (docs/hardware.md §3.4). MTA thread only.
+/// RAM-Beleuchtung über die ENE-HAL <c>ENE_RGB</c> (<c>AacHal_x64.dll</c>, in-proc); sie übernimmt SMBus und Sperren (docs/hardware.md §3.4). Nur im MTA-Thread.
 /// </summary>
 public sealed class RamController : IRamLights
 {
@@ -61,15 +63,16 @@ public sealed class RamController : IRamLights
         Modules = modules;
     }
 
-    /// <summary>Öffnet die ENE-HAL. Wirft, wenn sie nicht installiert ist oder der Thread nicht MTA ist.</summary>
+    /// <summary>Opens the ENE HAL; throws if not installed or the thread isn't MTA.
+    /// Öffnet die ENE-HAL; wirft, wenn sie fehlt oder der Thread nicht MTA ist.</summary>
     public static RamController Open()
     {
         if (Thread.CurrentThread.GetApartmentState() == ApartmentState.STA)
             throw new InvalidOperationException("Die ENE-RAM-HAL muss aus einem MTA-Thread benutzt werden.");
         var type = Type.GetTypeFromCLSID(EneHalClsid, throwOnError: true)!;
         var hal = (IAacLedDeviceHal)Activator.CreateInstance(type)!;
-        // Wie das Aura SDK: erst mit NULL die Anzahl holen, dann ein Zeiger-Array füllen lassen.
-        // Enumerate2 liefert bei dieser HAL kein gültiges HRESULT (§3.4).
+        // Get the count with NULL first, then let it fill a pointer array; Enumerate2 returns no valid HRESULT here (§3.4)
+        // Erst mit NULL die Anzahl holen, dann ein Zeiger-Array füllen lassen; Enumerate2 liefert hier kein gültiges HRESULT (§3.4)
         hal.Enumerate(IntPtr.Zero, out uint count);
         var devices = new IAacLedDevice?[count];
         if (count > 0)
@@ -99,11 +102,13 @@ public sealed class RamController : IRamLights
         return xml ?? "";
     }
 
-    /// <summary>Effekt mit einer Farbe für alle LEDs eines Moduls.</summary>
+    /// <summary>Effect with one color for all LEDs of a module.
+    /// Effekt mit einer Farbe für alle LEDs eines Moduls.</summary>
     public void SetEffect(int module, RamEffect effect, Rgb color) =>
         SetEffect(module, effect, Enumerable.Repeat(color, ledCounts[module]).ToArray());
 
-    /// <summary>Effekt mit Farben je LED. <see cref="RamEffect.Direct"/> = Farben direkt anzeigen.</summary>
+    /// <summary>Effect with colors per LED; <see cref="RamEffect.Direct"/> = show colors directly.
+    /// Effekt mit Farben je LED; <see cref="RamEffect.Direct"/> = Farben direkt anzeigen.</summary>
     public void SetEffect(int module, RamEffect effect, IReadOnlyList<Rgb> colors)
     {
         var d = devices[module] ?? throw new InvalidOperationException($"RAM-Modul {module} nicht verfügbar.");
@@ -118,7 +123,7 @@ public sealed class RamController : IRamLights
         Marshal.ReleaseComObject(hal);
     }
 
-    // Schnittstellen aus Aac3572DramHal.tlb / Aac3572MbHal.tlb (§3.4)
+    // Interfaces from Aac3572DramHal.tlb / Aac3572MbHal.tlb (§3.4) / Schnittstellen aus diesen TLBs
     [ComImport, Guid("F2C8D5B4-3854-4325-8A4F-FD7C5072E3B9"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     interface IAacLedDeviceHal
     {

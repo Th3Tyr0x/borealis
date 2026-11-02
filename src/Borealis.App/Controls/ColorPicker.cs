@@ -9,8 +9,8 @@ using Borealis.Core.Lighting;
 namespace Borealis.App.Controls;
 
 /// <summary>
-/// Farbwahl wie in Armoury Crate: Farbrad (Farbton im Kreis, Sättigung nach außen), Helligkeitsregler,
-/// Farbfelder und Hex-Eingabe. Meldet Änderungen über <see cref="ColorChanged"/> (auch während des Ziehens).
+/// Color picker: wheel (hue around, saturation outward), brightness slider, swatches, hex input; raises <see cref="ColorChanged"/> while dragging.
+/// Farbwahl: Farbrad (Farbton im Kreis, Sättigung nach außen), Helligkeit, Farbfelder, Hex; meldet <see cref="ColorChanged"/> auch beim Ziehen.
 /// </summary>
 public sealed class ColorPicker : UserControl
 {
@@ -83,7 +83,8 @@ public sealed class ColorPicker : UserControl
 
     public Rgb Color => FromHsv(hue, sat, val);
 
-    /// <summary>Farbe setzen (ohne Ereignis, außer <paramref name="notify"/>).</summary>
+    /// <summary>Set the color (no event unless <paramref name="notify"/>).
+    /// Farbe setzen (ohne Ereignis, außer <paramref name="notify"/>).</summary>
     public void SetColor(Rgb c, bool notify = false)
     {
         (hue, sat, val) = ToHsv(c);
@@ -152,7 +153,7 @@ public sealed class ColorPicker : UserControl
             double d = Math.Sqrt(dx * dx + dy * dy);
             if (d > r) continue;
             var c = FromHsv((Math.Atan2(dy, dx) / (2 * Math.PI) + 1) % 1.0, d / r, 1);
-            // Kante weich ausblenden
+            // Soft edge / Weicher Rand
             byte a = (byte)(Math.Clamp(r - d, 0, 1) * 255);
             int i = (y * WheelSize + x) * 4;
             px[i] = (byte)(c.B * a / 255); px[i + 1] = (byte)(c.G * a / 255); px[i + 2] = (byte)(c.R * a / 255); px[i + 3] = a;

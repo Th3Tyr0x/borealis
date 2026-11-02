@@ -5,9 +5,8 @@ using Borealis.Core.Profiles;
 
 namespace Borealis.Core.Ipc;
 
-/// <summary>
-/// Protokoll zwischen Tray-App und Dienst: Named Pipe <c>\\.\pipe\Borealis</c>, eine JSON-Zeile pro Anfrage und Antwort.
-/// </summary>
+/// <summary>Tray app ↔ service protocol: named pipe <c>\\.\pipe\Borealis</c>, one JSON line per request and response.
+/// Protokoll Tray-App ↔ Dienst: Named Pipe <c>\\.\pipe\Borealis</c>, eine JSON-Zeile pro Anfrage und Antwort.</summary>
 public static class PipeProtocol
 {
     public const string PipeName = "Borealis";
@@ -19,7 +18,8 @@ public static class PipeProtocol
         await stream.FlushAsync(token);
     }
 
-    /// <summary>Liest eine Zeile (bis \n); null bei Verbindungsende.</summary>
+    /// <summary>Read one line (up to \n); null when the connection ends.
+    /// Liest eine Zeile (bis \n); null bei Verbindungsende.</summary>
     public static async Task<T?> ReadAsync<T>(Stream stream, CancellationToken token) where T : class
     {
         var buf = new MemoryStream();
@@ -38,38 +38,49 @@ public static class PipeProtocol
 
 public static class Commands
 {
-    /// <summary>Zustand, Zonen, Profile abfragen.</summary>
+    /// <summary>Query state, zones, profiles.
+    /// Zustand, Zonen, Profile abfragen.</summary>
     public const string Status = "status";
-    /// <summary>Profil anwenden ohne zu speichern (Vorschau).</summary>
+    /// <summary>Apply a profile without saving (preview).
+    /// Profil anwenden ohne zu speichern (Vorschau).</summary>
     public const string Preview = "preview";
-    /// <summary>Profil speichern, aktiv setzen und anwenden (mit Standby-Effekten).</summary>
+    /// <summary>Save, activate and apply a profile (with standby effects).
+    /// Profil speichern, aktivieren und anwenden (mit Standby-Effekten).</summary>
     public const string Save = "save";
-    /// <summary>Gespeichertes Profil aktiv setzen und anwenden.</summary>
+    /// <summary>Activate and apply a saved profile.
+    /// Gespeichertes Profil aktivieren und anwenden.</summary>
     public const string Activate = "activate";
     public const string Delete = "delete";
-    /// <summary>Gespeichertes aktives Profil erneut anwenden (z. B. nach verworfener Vorschau).</summary>
+    /// <summary>Re-apply the saved active profile (e.g. after a discarded preview).
+    /// Gespeichertes aktives Profil erneut anwenden (z. B. nach verworfener Vorschau).</summary>
     public const string Reapply = "reapply";
     public const string SetLabels = "setLabels";
-    /// <summary>Profil <c>Name</c> in <c>NewName</c> umbenennen.</summary>
+    /// <summary>Rename profile <c>Name</c> to <c>NewName</c>.
+    /// Profil <c>Name</c> in <c>NewName</c> umbenennen.</summary>
     public const string Rename = "rename";
-    /// <summary>Dienst-Einstellungen setzen (<c>Settings</c>).</summary>
+    /// <summary>Set service settings (<c>Settings</c>).
+    /// Dienst-Einstellungen setzen (<c>Settings</c>).</summary>
     public const string SetSettings = "setSettings";
-    /// <summary>ASUS-LightingService starten (<c>Name</c> = "start") oder anhalten ("stop").</summary>
+    /// <summary>Start (<c>Name</c> = "start") or stop ("stop") the ASUS LightingService.
+    /// ASUS-LightingService starten (<c>Name</c> = "start") oder anhalten ("stop").</summary>
     public const string AsusLightingService = "asusLightingService";
-    /// <summary>LED-Anzahl des ARGB-Headers <c>Name</c> (Zonen-ID) im Controller auf <c>Count</c> setzen.</summary>
+    /// <summary>Set the LED count of ARGB header <c>Name</c> (zone ID) to <c>Count</c>.
+    /// LED-Anzahl des ARGB-Headers <c>Name</c> (Zonen-ID) auf <c>Count</c> setzen.</summary>
     public const string SetLedCount = "setLedCount";
-    /// <summary>Zähltest auf dem ARGB-Header <c>Name</c> zeigen; ohne Name beenden (Profil wieder anwenden).</summary>
+    /// <summary>Show the count test on ARGB header <c>Name</c>; no name ends it.
+    /// Zähltest auf ARGB-Header <c>Name</c> zeigen; ohne Name beenden.</summary>
     public const string LedTest = "ledTest";
-    /// <summary>
-    /// Abgleich-Modus: alle Zonen in der Referenzfarbe <c>Name</c> (RRGGBB, mit Farbabgleich) zeigen;
-    /// ohne Name beenden (Profil wieder anwenden).
-    /// </summary>
+    /// <summary>Calibration mode: all zones in reference color <c>Name</c> (RRGGBB, calibrated); no name ends it.
+    /// Abgleich-Modus: alle Zonen in Referenzfarbe <c>Name</c> (RRGGBB, mit Abgleich); ohne Name beenden.</summary>
     public const string CalibrationPreview = "calibrationPreview";
-    /// <summary>Letzte Messung der Lüfter und Temperaturen (<c>Sensors</c> in der Antwort).</summary>
+    /// <summary>Latest fan and temperature reading (<c>Sensors</c> in the response).
+    /// Letzte Messung der Lüfter und Temperaturen (<c>Sensors</c> in der Antwort).</summary>
     public const string Sensors = "sensors";
-    /// <summary>Auto-Tuning: <c>Name</c> = "start" (alles), "only:CPUFAN,AUXFAN4" (nur diese), "pump" (nur Pumpe) oder "cancel".</summary>
+    /// <summary>Auto-tuning: <c>Name</c> = "start" (all), "only:CPUFAN,AUXFAN4", "pump" or "cancel".
+    /// Auto-Tuning: <c>Name</c> = "start" (alles), "only:CPUFAN,AUXFAN4", "pump" oder "cancel".</summary>
     public const string FanTune = "fanTune";
-    /// <summary>Hardwarezugriff neu versuchen (nach der Einrichtung von PawnIO): Sensoren neu öffnen, Lüfterkurven schreiben.</summary>
+    /// <summary>Retry hardware access (after PawnIO setup): reopen sensors, write fan curves.
+    /// Hardwarezugriff neu versuchen (nach PawnIO-Einrichtung): Sensoren öffnen, Kurven schreiben.</summary>
     public const string HardwareRetry = "hardwareRetry";
 }
 
@@ -91,7 +102,8 @@ public sealed class PipeResponse
     public List<string> Notes { get; set; } = [];
     public StatusInfo? Status { get; set; }
     public Hardware.SensorSnapshot? Sensors { get; set; }
-    /// <summary>Stand des Auto-Tunings (mit jeder Sensorabfrage).</summary>
+    /// <summary>Auto-tuning state (with every sensor poll).
+    /// Stand des Auto-Tunings (mit jeder Sensorabfrage).</summary>
     public FanTuneStatus? Tune { get; set; }
 
     public static PipeResponse Fail(string error) => new() { Ok = false, Error = error };
@@ -100,10 +112,12 @@ public sealed class PipeResponse
 public sealed class FanTuneStatus
 {
     public bool Running { get; set; }
-    /// <summary>Fortschritt 0–100.</summary>
+    /// <summary>Progress 0–100.
+    /// Fortschritt 0–100.</summary>
     public int Percent { get; set; }
     public string Message { get; set; } = "";
-    /// <summary>Ergebnis des letzten Laufs (Fehler oder Abbruch); null = in Ordnung bzw. noch keiner.</summary>
+    /// <summary>Result of the last run (error or cancel); null = OK or none yet.
+    /// Ergebnis des letzten Laufs (Fehler oder Abbruch); null = OK bzw. noch keiner.</summary>
     public string? Error { get; set; }
 }
 
@@ -126,18 +140,23 @@ public sealed class StatusInfo
     public LightingProfile? ActiveProfile { get; set; }
     public Dictionary<string, string> ZoneLabels { get; set; } = new();
     public BorealisSettings Settings { get; set; } = new();
-    /// <summary>Gemessene Bildrate der Software-Effekte; 0 = es läuft kein Software-Effekt.</summary>
+    /// <summary>Measured software effect frame rate; 0 = none running.
+    /// Gemessene Bildrate der Software-Effekte; 0 = keiner läuft.</summary>
     public double EffectFps { get; set; }
     public string AsusLightingService { get; set; } = "";
-    /// <summary>Referenzfarbe des laufenden Abgleich-Modus (RRGGBB); null = aus.</summary>
+    /// <summary>Reference color of the running calibration mode (RRGGBB); null = off.
+    /// Referenzfarbe des laufenden Abgleich-Modus (RRGGBB); null = aus.</summary>
     public string? CalibrationColor { get; set; }
-    /// <summary>Zustand des ASUS-Lüfterdienstes („läuft“, „angehalten“, …).</summary>
+    /// <summary>ASUS fan service state ("läuft", "angehalten", …).
+    /// Zustand des ASUS-Lüfterdienstes („läuft“, „angehalten“, …).</summary>
     public string AsusFanService { get; set; } = "";
-    /// <summary>Letzter Fehler beim Schreiben der Lüfterkurven; null = in Ordnung.</summary>
+    /// <summary>Last error writing fan curves; null = OK.
+    /// Letzter Fehler beim Schreiben der Lüfterkurven; null = OK.</summary>
     public string? FanError { get; set; }
 }
 
-/// <summary>Client für die Tray-App (und Tests). Jede Anfrage öffnet eine eigene Verbindung.</summary>
+/// <summary>Client for the tray app (and tests); each request opens its own connection.
+/// Client für die Tray-App (und Tests); jede Anfrage öffnet eine eigene Verbindung.</summary>
 public sealed class PipeClient
 {
     readonly int connectTimeoutMs;

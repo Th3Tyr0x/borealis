@@ -1,8 +1,8 @@
 namespace Borealis.Core.Hardware;
 
 /// <summary>
-/// Systemweite Sperren, die Hardware-Tools untereinander nutzen (auch der ASUS-Lüfterdienst, §6, und PawnIO-Programme):
-/// ISA-Bus für Super-I/O-Zugriffe, PCI für den SMN-Index der AMD-CPU, SMBus für RAM-Beleuchtung und SPD.
+/// System-wide locks shared by hardware tools (incl. the ASUS fan service, §6): ISA bus, PCI (AMD SMN index), SMBus.
+/// Systemweite Sperren, die Hardware-Tools teilen (auch der ASUS-Lüfterdienst, §6): ISA-Bus, PCI (SMN-Index), SMBus.
 /// </summary>
 public sealed class BusLock : IDisposable
 {
@@ -14,7 +14,8 @@ public sealed class BusLock : IDisposable
 
     public BusLock(string name) { mutex = new Mutex(false, name); }
 
-    /// <summary>Sperre nehmen; false, wenn ein anderes Programm sie zu lange hält.</summary>
+    /// <summary>Take the lock; false if another program holds it too long.
+    /// Sperre nehmen; false, wenn ein anderes Programm sie zu lange hält.</summary>
     public bool Enter(int timeoutMs = 200)
     {
         try { return mutex.WaitOne(timeoutMs); }

@@ -1,11 +1,13 @@
 
 namespace Borealis.Core.Hardware;
 
-/// <summary>Momentaufnahme aller Lüfter und Temperaturen (geht per Pipe an die App).</summary>
+/// <summary>Snapshot of all fans and temperatures (sent to the app over the pipe).
+/// Momentaufnahme aller Lüfter und Temperaturen (geht per Pipe an die App).</summary>
 public sealed class SensorSnapshot
 {
     public DateTime Time { get; set; }
-    /// <summary>Woher die Werte kommen, z. B. „NCT6799D (…) über PawnIO“.</summary>
+    /// <summary>Where the values come from, e.g. "NCT6799D (…) via PawnIO".
+    /// Woher die Werte kommen, z. B. „NCT6799D (…) über PawnIO“.</summary>
     public string? Source { get; set; }
     public string? Error { get; set; }
     public List<FanSensor> Fans { get; set; } = [];
@@ -14,14 +16,18 @@ public sealed class SensorSnapshot
 
 public sealed class FanSensor
 {
-    /// <summary>Eingang am Chip, z. B. „CPUFAN“.</summary>
+    /// <summary>Chip input, e.g. "CPUFAN".
+    /// Eingang am Chip, z. B. „CPUFAN“.</summary>
     public string Id { get; set; } = "";
     public string Name { get; set; } = "";
-    /// <summary>Drehzahl; 0 = steht oder nicht angeschlossen, null = kein gültiger Messwert.</summary>
+    /// <summary>RPM; 0 = stopped or not connected, null = no valid reading.
+    /// Drehzahl; 0 = steht oder nicht angeschlossen, null = kein gültiger Wert.</summary>
     public int? Rpm { get; set; }
-    /// <summary>Aktuelle Leistung in Prozent (PWM-Ausgang des Chips).</summary>
+    /// <summary>Current duty in percent (chip PWM output).
+    /// Aktuelle Leistung in Prozent (PWM-Ausgang des Chips).</summary>
     public int Duty { get; set; }
-    /// <summary>Ein Lüfter hängt dran: hat seit dem Dienststart gedreht oder wurde beim Auto-Tuning gefunden.</summary>
+    /// <summary>A fan is connected: it spun since service start or was found by auto-tuning.
+    /// Ein Lüfter hängt dran: hat seit dem Dienststart gedreht oder wurde beim Auto-Tuning gefunden.</summary>
     public bool Connected { get; set; }
 }
 
@@ -33,13 +39,14 @@ public sealed class TemperatureSensor
 }
 
 /// <summary>
-/// Liest Lüfter und Temperaturen über den ASUS-IO-Treiber: Super-I/O NCT6799D und die AMD-CPU (SMN).
-/// Nur lesend; die Kurven schreibt <see cref="Nct6799.WriteCurve"/>.
+/// Reads fans and temperatures (NCT6799D Super I/O and AMD CPU via SMN). Read-only; curves are written by <see cref="Nct6799.WriteCurve"/>.
+/// Liest Lüfter und Temperaturen (Super-I/O NCT6799D und AMD-CPU über SMN). Nur lesend; Kurven schreibt <see cref="Nct6799.WriteCurve"/>.
 /// </summary>
 public sealed class SensorReader : IDisposable
 {
 
-    /// <summary>Temperaturquellen des Chips, die auf dem Board beschaltet sind.</summary>
+    /// <summary>Chip temperature sources wired on the board.
+    /// Temperaturquellen des Chips, die auf dem Board beschaltet sind.</summary>
     static readonly Dictionary<TempSource, string> SioTemperatures = new()
     {
         [TempSource.Cputin] = "CPU-Sockel",
@@ -57,7 +64,8 @@ public sealed class SensorReader : IDisposable
 
     public string Source => sio.Description + " über PawnIO";
 
-    /// <summary>Chip suchen und öffnen; wirft, wenn PawnIO fehlt oder kein unterstützter Chip gefunden wird.</summary>
+    /// <summary>Find and open the chip; throws without PawnIO or a supported chip.
+    /// Chip suchen und öffnen; wirft ohne PawnIO oder unterstützten Chip.</summary>
     public static SensorReader Open()
     {
         var sio = Nct6799.Detect() ?? throw new IOException("Kein unterstützter Lüfter-Chip gefunden (erwartet Nuvoton NCT6799D).");
@@ -90,7 +98,7 @@ public sealed class SensorReader : IDisposable
             }
             catch (Exception ex) when (ex is IOException or TimeoutException) { snapshot.Error = "CPU-Temperatur: " + ex.Message; }
         }
-        // In der Reihenfolge der Tabelle; unbeschaltete Fühler liefern Werte nahe 0 oder Unsinn
+        // In table order; unwired sensors read near 0 or garbage / In Tabellenreihenfolge; unbeschaltete Fühler liefern ~0 oder Unsinn
         foreach (var (source, name) in SioTemperatures)
         {
             var hit = r.Temperatures.FirstOrDefault(t => t.Source == source);
@@ -107,12 +115,13 @@ public sealed class SensorReader : IDisposable
     }
 }
 
-/// <summary>Ein Lüfteranschluss des Boards: Eingang/Kanal am Chip, Kennung, Name, Pumpe ja/nein.</summary>
+/// <summary>A board fan header: chip input/channel, ID, name, pump yes/no.
+/// Ein Lüfteranschluss des Boards: Eingang/Kanal am Chip, Kennung, Name, Pumpe ja/nein.</summary>
 public sealed record FanHeader(int Input, string Id, string Name, bool Pump);
 
 /// <summary>
-/// Anschlüsse auf ASUS-AM5-Boards wie dem ROG STRIX B650E-E (aus <c>FanInfo.data</c>, §2.4: SIO-Bank je Lüfter),
-/// in der Reihenfolge von Armoury Crate. Eingang = Index am Chip (SYSFAN, CPUFAN, AUXFAN0–4).
+/// Headers on ASUS AM5 boards such as the B650E-E (from <c>FanInfo.data</c>, §2.4); input = chip index (SYSFAN, CPUFAN, AUXFAN0–4).
+/// Anschlüsse auf ASUS-AM5-Boards wie dem B650E-E (aus <c>FanInfo.data</c>, §2.4); Eingang = Index am Chip (SYSFAN, CPUFAN, AUXFAN0–4).
 /// </summary>
 public static class BoardFans
 {

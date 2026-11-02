@@ -3,37 +3,42 @@ using System.Text;
 namespace Borealis.Core.Hardware;
 
 /// <summary>
-/// Super-I/O Nuvoton NCT6799D (SIO-ID 0xD8xx) über PawnIO (Modul LpcIO): Drehzahlen, Lüfterleistung (PWM), Temperaturen und
-/// Lüfterkurven (SmartFan IV). Registerbelegung wie im NCT6796D-Datenblatt bzw. LibreHardwareMonitor (<c>Nct677X</c>);
-/// Kurven schreiben wie der ASUS-Lüfterdienst (<c>NCT6796DEx::DoEnableSmartFan4</c>, docs/hardware.md §2.3).
-/// Jeder Zugriff läuft unter der ISA-Bus-Sperre, die auch der ASUS-Lüfterdienst nimmt; Bank- und Indexregister
-/// werden danach wiederhergestellt, damit der Dienst nichts merkt.
+/// Nuvoton NCT6799D Super I/O (SIO ID 0xD8xx) via PawnIO (LpcIO): RPM, PWM duty, temperatures and SmartFan IV curves.
+/// Registers as in the NCT6796D datasheet / LibreHardwareMonitor; curves written like the ASUS fan service (docs/hardware.md §2.3).
+/// Every access runs under the ISA bus lock; bank and index registers are restored afterwards.
+/// Super-I/O NCT6799D (SIO-ID 0xD8xx) über PawnIO (LpcIO): Drehzahl, PWM-Leistung, Temperaturen und SmartFan-IV-Kurven.
+/// Register wie im NCT6796D-Datenblatt / LibreHardwareMonitor; Kurven wie der ASUS-Lüfterdienst (docs/hardware.md §2.3).
+/// Jeder Zugriff läuft unter der ISA-Bus-Sperre; Bank- und Indexregister werden danach wiederhergestellt.
 /// </summary>
 public sealed class Nct6799 : IDisposable
 {
-    // Konfigurationsraum
+    // Configuration space / Konfigurationsraum
     const byte LdnSelect = 0x07, ChipIdHigh = 0x20, ChipIdLow = 0x21, Activate = 0x30, BaseHigh = 0x60, BaseLow = 0x61;
     const byte HardwareMonitorLdn = 0x0B;
-    // Hardware-Monitor: Adress-/Datenport ab Basis, Bankauswahl
+    // Hardware monitor: address/data port from base, bank select / Adress-/Datenport ab Basis, Bankauswahl
     const int AddressOffset = 5, DataOffset = 6;
     const byte BankSelect = 0x4E;
     const ushort VendorHigh = 0x804F, VendorLow = 0x004F, NuvotonVendor = 0x5CA3;
 
-    /// <summary>Zählerregister je Lüftereingang (SYSFAN, CPUFAN, AUXFAN0–4); 13 Bit, Drehzahl = 1,35·10⁶ / Zähler.</summary>
+    /// <summary>Count register per fan input (SYSFAN, CPUFAN, AUXFAN0–4); 13 bit, RPM = 1.35·10⁶ / count.
+    /// Zählerregister je Lüftereingang (SYSFAN, CPUFAN, AUXFAN0–4); 13 Bit, Drehzahl = 1,35·10⁶ / Zähler.</summary>
     static readonly ushort[] FanCountRegisters = [0x4B0, 0x4B2, 0x4B4, 0x4B6, 0x4B8, 0x4BA, 0x4CC];
-    /// <summary>Aktuelle PWM-Ausgabe je Lüfterkanal (0–255).</summary>
+    /// <summary>Current PWM output per fan channel (0–255).
+    /// Aktuelle PWM-Ausgabe je Lüfterkanal (0–255).</summary>
     static readonly ushort[] PwmOutRegisters = [0x001, 0x003, 0x011, 0x013, 0x015, 0xA09, 0xB09];
     public static readonly string[] FanInputs = ["SYSFAN", "CPUFAN", "AUXFAN0", "AUXFAN1", "AUXFAN2", "AUXFAN3", "AUXFAN4"];
-    /// <summary>Bank der Regelregister je Lüfterkanal (passt zu den SIO-Bänken in FanInfo.data, §2.4).</summary>
+    /// <summary>Control register bank per fan channel (matches the SIO banks in FanInfo.data, §2.4).
+    /// Bank der Regelregister je Lüfterkanal (passt zu den SIO-Bänken in FanInfo.data, §2.4).</summary>
     static readonly int[] ControlBanks = [1, 2, 3, 8, 9, 10, 11];
-    // Je Bank: Temperaturquelle, Regelmodus (0x40 = SmartFan IV), Kurve T1–T4 und Leistung 1–4 (0–255)
+    // Per bank: temp source, mode (0x40 = SmartFan IV), curve T1–T4 and duty 1–4 (0–255)
+    // Je Bank: Temperaturquelle, Modus (0x40 = SmartFan IV), Kurve T1–T4 und Leistung 1–4 (0–255)
     const byte SourceRegister = 0x00, ModeRegister = 0x02, SmartFan4 = 0x40;
     static readonly byte[] CurveTempRegisters = [0x21, 0x22, 0x23, 0x24];
     static readonly byte[] CurveDutyRegisters = [0x27, 0x28, 0x29, 0x2A];
 
     /// <summary>
-    /// Temperatur-Messplätze: Wert (ganze Grad), Register mit dem halben Grad, Bit dafür, Register mit der Quelle,
-    /// fest zugeordnete Quelle (wenn es kein Quellregister gibt) und Ersatzregister.
+    /// Temperature slots: value (whole degrees), half-degree register and bit, source register, fixed source (if none) and fallback register.
+    /// Temperatur-Messplätze: Wert (ganze Grad), Register und Bit für halbe Grad, Quellregister, feste Quelle (falls keins) und Ersatzregister.
     /// </summary>
     readonly record struct TempSlot(ushort Register, ushort HalfRegister, int HalfBit, ushort SourceRegister, TempSource Source, ushort Alternate = 0);
 
@@ -65,10 +70,11 @@ public sealed class Nct6799 : IDisposable
         new(0, 0, -1, 0, TempSource.Peci1Cal, 0x4F5),
     ];
 
-    // Globales Konfigurationsregister mit der I/O-Sperre des Hardware-Monitors
+    // Global config register with the hardware monitor I/O lock / Globales Konfigurationsregister mit der I/O-Sperre
     const byte IoSpaceLockRegister = 0x28, IoSpaceLock = 0x10;
 
     readonly BusLock isa = new(BusLock.IsaBus);
+    // ASUS fan service event (auto-reset, free = signaled); created by Borealis if the service is missing
     // Ereignis des ASUS-Lüfterdienstes (Auto-Reset, frei = signalisiert); fehlt der Dienst, legt Borealis es an
     readonly EventWaitHandle asusSio = new(true, EventResetMode.AutoReset, @"Global\ASUS_SIO_MUTEX");
     readonly ushort address, data;
@@ -90,13 +96,12 @@ public sealed class Nct6799 : IDisposable
 
     public string Description => $"NCT6799D (ID 0x{ChipId:X4}, Port 0x{ConfigPort:X2}, Basis 0x{Base:X3})";
 
-    // Analyse: globale Konfigurationsregister 0x22–0x2F und LDN-0x0B-Register 0x60–0x63, 0xE0–0xEF
+    // Analysis: global config 0x22–0x2F and LDN 0x0B registers 0x60–0x63, 0xE0–0xEF
+    // Analyse: globale Konfiguration 0x22–0x2F und LDN-0x0B-Register 0x60–0x63, 0xE0–0xEF
     byte[] GlobalConfig = [], LdnConfig = [];
 
-    /// <summary>
-    /// Chip an 0x2E bzw. 0x4E suchen; null, wenn kein NCT6799D gefunden wurde. Wirft <see cref="PawnIoMissingException"/>,
-    /// wenn PawnIO fehlt.
-    /// </summary>
+    /// <summary>Find the chip at 0x2E or 0x4E; null if no NCT6799D. Throws <see cref="PawnIoMissingException"/> without PawnIO.
+    /// Chip an 0x2E bzw. 0x4E suchen; null ohne NCT6799D. Wirft <see cref="PawnIoMissingException"/> ohne PawnIO.</summary>
     public static Nct6799? Detect()
     {
         var lpc = LpcIo.Open();
@@ -111,14 +116,15 @@ public sealed class Nct6799 : IDisposable
                 try
                 {
                     lpc.SelectSlot(port);
-                    // Nuvoton-Konfigurationsmodus: zweimal 0x87, verlassen mit 0xAA
+                    // Nuvoton config mode: 0x87 twice, leave with 0xAA / Konfigurationsmodus: zweimal 0x87, verlassen mit 0xAA
                     lpc.OutB(port, 0x87);
                     lpc.OutB(port, 0x87);
                     try
                     {
                         ushort id = (ushort)((ReadConfig(lpc, port, ChipIdHigh) << 8) | ReadConfig(lpc, port, ChipIdLow));
                         if ((id & 0xFF00) != 0xD800) continue;
-                        // Basisadressen für LpcIO freigeben (wechselt dabei das logische Gerät)
+                        // Unlock base addresses for LpcIO (switches the logical device)
+                        // Basisadressen für LpcIO freigeben (wechselt das logische Gerät)
                         lpc.FindBars();
                         WriteConfig(lpc, port, LdnSelect, HardwareMonitorLdn);
                         bool active = (ReadConfig(lpc, port, Activate) & 1) != 0;
@@ -159,7 +165,8 @@ public sealed class Nct6799 : IDisposable
         lpc.OutB((ushort)(port + 1), value);
     }
 
-    /// <summary>Messwerte des Chips.</summary>
+    /// <summary>Chip readings.
+    /// Messwerte des Chips.</summary>
     public sealed record Reading(int?[] FanRpm, byte[] Pwm, IReadOnlyList<(TempSource Source, double Celsius)> Temperatures);
 
     public Reading Read() => Locked(io =>
@@ -170,7 +177,7 @@ public sealed class Nct6799 : IDisposable
         for (int i = 0; i < FanCountRegisters.Length; i++)
         {
             int count = (io.Read(FanCountRegisters[i]) << 5) | (io.Read((ushort)(FanCountRegisters[i] + 1)) & 0x1F);
-            // 0x1FFF = steht oder fehlt; sehr kleine Zähler sind Messfehler
+            // 0x1FFF = stopped or missing; very small counts are glitches / steht oder fehlt; sehr kleine Zähler sind Messfehler
             rpm[i] = count >= 0x1FFF ? 0 : count < 0x15 ? null : (int)Math.Round(1.35e6 / count);
             pwm[i] = io.Read(PwmOutRegisters[i]);
         }
@@ -192,7 +199,7 @@ public sealed class Nct6799 : IDisposable
             if (t is > 125 or < -55) { seen.Remove(source); continue; }
             result.Add((source, t));
         }
-        // Ersatzregister für Quellen, die keinem Messplatz zugeordnet sind
+        // Fallback registers for sources without a slot / Ersatzregister für Quellen ohne Messplatz
         foreach (var slot in TempSlots)
         {
             if (slot.Alternate == 0 || seen.Contains(slot.Source)) continue;
@@ -204,7 +211,8 @@ public sealed class Nct6799 : IDisposable
         return result;
     }
 
-    /// <summary>Rohdaten für die Analyse (<c>Borealis.Service --sensors</c>).</summary>
+    /// <summary>Raw data for analysis (<c>Borealis.Service --sensors</c>).
+    /// Rohdaten für die Analyse (<c>Borealis.Service --sensors</c>).</summary>
     public string Dump() => Locked(io =>
     {
         var sb = new StringBuilder();
@@ -228,7 +236,7 @@ public sealed class Nct6799 : IDisposable
         }
         foreach (var slot in TempSlots.Where(s => s.Alternate != 0))
             sb.AppendLine($"  Ersatz 0x{slot.Alternate:X3} ({slot.Source}) = {(sbyte)io.Read(slot.Alternate)} °C");
-        // Regelkanäle (SmartFan IV): Register 0x00–0x3F je Bank
+        // Control channels (SmartFan IV): registers 0x00–0x3F per bank / Regelkanäle: Register 0x00–0x3F je Bank
         for (int i = 0; i < FanInputs.Length; i++)
         {
             int bank = ControlModeRegister(i) >> 8;
@@ -242,7 +250,8 @@ public sealed class Nct6799 : IDisposable
     static ushort ControlModeRegister(int fan) => ControlRegister(fan, ModeRegister);
     static ushort ControlRegister(int fan, byte register) => (ushort)((ControlBanks[fan] << 8) | register);
 
-    /// <summary>Im Chip stehende Kurve eines Lüfterkanals.</summary>
+    /// <summary>Curve currently in the chip for a fan channel.
+    /// Im Chip stehende Kurve eines Lüfterkanals.</summary>
     public sealed record ChipCurve(byte Mode, byte Source, byte[] Temps, byte[] Duties)
     {
         public bool IsSmartFan4 => (Mode & 0xF0) == SmartFan4;
@@ -255,11 +264,13 @@ public sealed class Nct6799 : IDisposable
         CurveTempRegisters.Select(r => io.Read(ControlRegister(fan, r))).ToArray(),
         CurveDutyRegisters.Select(r => io.Read(ControlRegister(fan, r))).ToArray());
 
-    /// <summary>Register 0x00–0x0F der Regelbank eines Lüfterkanals (nur lesend, für das Protokoll).</summary>
+    /// <summary>Registers 0x00–0x0F of a channel's control bank (read-only, for the log).
+    /// Register 0x00–0x0F der Regelbank eines Kanals (nur lesend, fürs Protokoll).</summary>
     public byte[] ReadControlBlock(int fan) =>
         Locked(io => Enumerable.Range(0, 16).Select(r => io.Read(ControlRegister(fan, (byte)r))).ToArray());
 
-    /// <summary>Eine zuvor gelesene Kurve unverändert zurückschreiben (Modus, Punkte); gibt die zurückgelesene Kurve zurück.</summary>
+    /// <summary>Write back a previously read curve unchanged (mode, points); returns the read-back curve.
+    /// Zuvor gelesene Kurve unverändert zurückschreiben (Modus, Punkte); liefert die zurückgelesene Kurve.</summary>
     public ChipCurve RestoreCurve(int fan, ChipCurve original) => Locked(io =>
     {
         for (int i = 0; i < 4; i++) io.Write(ControlRegister(fan, CurveTempRegisters[i]), original.Temps[i]);
@@ -269,9 +280,10 @@ public sealed class Nct6799 : IDisposable
     });
 
     /// <summary>
-    /// Kurve in den Chip schreiben und SmartFan IV einschalten; danach regelt der Chip selbst nach der Temperaturquelle
-    /// des Kanals (auf dem B650E-E die CPU), auch wenn Borealis nicht läuft. Mit <paramref name="source"/> wird auch die
-    /// Temperaturquelle gesetzt (Bits 0–4 im Register 0x00 der Bank, die übrigen bleiben). Gibt die zurückgelesene Kurve zurück.
+    /// Write the curve and enable SmartFan IV; the chip then regulates on its own, even without Borealis.
+    /// <paramref name="source"/> also sets the temperature source (bits 0–4 of bank register 0x00). Returns the read-back curve.
+    /// Kurve schreiben und SmartFan IV einschalten; danach regelt der Chip selbst, auch ohne Borealis.
+    /// <paramref name="source"/> setzt auch die Temperaturquelle (Bits 0–4 im Bankregister 0x00). Liefert die zurückgelesene Kurve.
     /// </summary>
     public ChipCurve WriteCurve(int fan, IReadOnlyList<byte> temps, IReadOnlyList<byte> duties, TempSource? source = null)
     {
@@ -289,7 +301,7 @@ public sealed class Nct6799 : IDisposable
                 byte old = io.Read(ControlRegister(fan, SourceRegister));
                 if ((old & 0x1F) != (byte)src) io.Write(ControlRegister(fan, SourceRegister), (byte)((old & 0xE0) | (byte)src));
             }
-            // Reihenfolge wie im ASUS-Dienst: Modus, Temperaturen, Leistung
+            // Same order as the ASUS service: mode, temperatures, duty / Reihenfolge wie im ASUS-Dienst: Modus, Temperaturen, Leistung
             io.Write(ControlRegister(fan, ModeRegister), SmartFan4);
             for (int i = 0; i < 4; i++) io.Write(ControlRegister(fan, CurveTempRegisters[i]), temps[i]);
             for (int i = 0; i < 4; i++) io.Write(ControlRegister(fan, CurveDutyRegisters[i]), duties[i]);
@@ -298,10 +310,10 @@ public sealed class Nct6799 : IDisposable
     }
 
     /// <summary>
-    /// Zugriff wie der ASUS-Lüfterdienst (<c>SioAccessMutex::EnterMutexFor6791</c>/<c>LeaveMutexFor6791</c>, §2.1):
-    /// ISA-Bus-Sperre, dann das ASUS-Ereignis <c>Global\ASUS_SIO_MUTEX</c>; das BIOS sperrt den I/O-Bereich des
-    /// Hardware-Monitors (CR28 Bit 4), deshalb wird die Sperre für die Dauer des Zugriffs aufgehoben und danach
-    /// wieder gesetzt.
+    /// Access like the ASUS fan service (§2.1): ISA bus lock, then the event <c>Global\ASUS_SIO_MUTEX</c>. The BIOS locks the
+    /// hardware monitor I/O range (CR28 bit 4), so the lock is lifted during access and set again afterwards.
+    /// Zugriff wie der ASUS-Lüfterdienst (§2.1): ISA-Bus-Sperre, dann das Ereignis <c>Global\ASUS_SIO_MUTEX</c>. Das BIOS sperrt
+    /// den I/O-Bereich des Hardware-Monitors (CR28 Bit 4); die Sperre wird für den Zugriff aufgehoben und danach wieder gesetzt.
     /// </summary>
     T Locked<T>(Func<Session, T> body)
     {
@@ -315,7 +327,7 @@ public sealed class Nct6799 : IDisposable
                 if ((cr28 & IoSpaceLock) != 0) ConfigSession(() => WriteConfig(lpc, ConfigPort, IoSpaceLockRegister, (byte)(cr28 & ~IoSpaceLock)));
                 try
                 {
-                    // Index und Bank merken und danach wiederherstellen
+                    // Save index and bank, restore afterwards / Index und Bank merken und danach wiederherstellen
                     byte oldIndex = lpc.InB(address);
                     lpc.OutB(address, BankSelect);
                     byte oldBank = lpc.InB(data);
@@ -338,7 +350,8 @@ public sealed class Nct6799 : IDisposable
         finally { isa.Exit(); }
     }
 
-    /// <summary>Nuvoton-Konfigurationsmodus betreten (2× 0x87), Aktion ausführen, verlassen (0xAA).</summary>
+    /// <summary>Enter Nuvoton config mode (2× 0x87), run the action, leave (0xAA).
+    /// Konfigurationsmodus betreten (2× 0x87), Aktion ausführen, verlassen (0xAA).</summary>
     T ConfigSession<T>(Func<T> action)
     {
         lpc.OutB(ConfigPort, 0x87);
@@ -349,7 +362,8 @@ public sealed class Nct6799 : IDisposable
 
     void ConfigSession(Action action) => ConfigSession(() => { action(); return 0; });
 
-    /// <summary>Zugriff auf die Hardware-Monitor-Register (Bank im oberen Byte) während einer gesperrten Sitzung.</summary>
+    /// <summary>Hardware monitor register access (bank in the high byte) inside a locked session.
+    /// Zugriff auf Hardware-Monitor-Register (Bank im oberen Byte) in einer gesperrten Sitzung.</summary>
     sealed class Session(LpcIo lpc, ushort address, ushort data, byte bank)
     {
         int currentBank = bank;
@@ -384,7 +398,8 @@ public sealed class Nct6799 : IDisposable
     }
 }
 
-/// <summary>Temperaturquellen des NCT679x (Wert im Quellregister, Bits 0–4).</summary>
+/// <summary>NCT679x temperature sources (source register value, bits 0–4).
+/// Temperaturquellen des NCT679x (Wert im Quellregister, Bits 0–4).</summary>
 public enum TempSource
 {
     None = 0, Systin = 1, Cputin = 2, Auxtin0 = 3, Auxtin1 = 4, Auxtin2 = 5, Auxtin3 = 6, Auxtin4 = 7,

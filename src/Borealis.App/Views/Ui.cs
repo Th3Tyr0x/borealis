@@ -8,7 +8,8 @@ using Borealis.Core.Lighting;
 
 namespace Borealis.App.Views;
 
-/// <summary>Bausteine für die Seiten (Kacheln, Segmente, Karten) mit den Stilen aus Themes/Borealis.xaml.</summary>
+/// <summary>Page building blocks (tiles, segments, cards) using the styles in Themes/Borealis.xaml.
+/// Bausteine für die Seiten (Kacheln, Segmente, Karten) mit den Stilen aus Themes/Borealis.xaml.</summary>
 static class Ui
 {
     public static T Res<T>(string key) => (T)Application.Current.FindResource(key);
@@ -32,8 +33,8 @@ static class Ui
     };
 
     /// <summary>
-    /// Effekt-Kacheln (ein Effekt wählbar), gruppiert wie in <see cref="SoftwareEffects.Sections"/>.
-    /// <paramref name="firmwareOnly"/>: nur die Hardware-Effekte des Controllers (z. B. nach dem Herunterfahren).
+    /// Effect tiles (single choice), grouped like <see cref="SoftwareEffects.Sections"/>; <paramref name="firmwareOnly"/>: controller effects only.
+    /// Effekt-Kacheln (eine Auswahl), gruppiert wie <see cref="SoftwareEffects.Sections"/>; <paramref name="firmwareOnly"/>: nur Controller-Effekte.
     /// </summary>
     public static StackPanel EffectTiles(FirmwareEffect selected, Action<FirmwareEffect> onSelect, string group, bool compact = false, bool firmwareOnly = false)
     {
@@ -64,7 +65,8 @@ static class Ui
         return root;
     }
 
-    /// <summary>Segmentschalter; liefert den gewählten Wert.</summary>
+    /// <summary>Segmented switch; returns the chosen value.
+    /// Segmentschalter; liefert den gewählten Wert.</summary>
     public static StackPanel Segments<T>(IEnumerable<(T Value, string Text)> items, T selected, Action<T> onSelect, string group)
     {
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
@@ -81,7 +83,8 @@ static class Ui
     public static StackPanel SpeedSegments(SpeedLevel selected, Action<SpeedLevel> onSelect, string group) =>
         Segments([(SpeedLevel.Slow, Loc.T("Langsam", "Slow")), (SpeedLevel.Normal, "Normal"), (SpeedLevel.Fast, Loc.T("Schnell", "Fast"))], selected, onSelect, group);
 
-    /// <summary>Karte mit Symbol, Titel und Untertitel zum Ein-/Ausschalten.</summary>
+    /// <summary>Toggle card with icon, title and subtitle.
+    /// Karte mit Symbol, Titel und Untertitel zum Ein-/Ausschalten.</summary>
     public static ToggleButton Chip(Geometry icon, string title, string subtitle, bool isChecked, Action<bool> onToggle, double width = 250)
     {
         var grid = new Grid { Width = width };

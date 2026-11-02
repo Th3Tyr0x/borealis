@@ -3,10 +3,10 @@ using Borealis.Core.Hardware;
 namespace Borealis.Service;
 
 /// <summary>
-/// Analyse der RAM-Beleuchtung über SMBus (<c>--ramprobe</c>), nur lesend. Spricht ausschließlich die ENE-Adressen
-/// 0x70–0x73 an, die die ENE-HAL auf diesem PC gefunden hat; SPD-Hub (0x50–0x57) und PMIC (0x48–0x4F) nie.
-/// Klärt die Byte-Reihenfolge der Registeradresse (Chip-ID-Register 0xF01C in beiden Reihenfolgen) und liest
-/// Name, Konfiguration und Steuerblöcke.
+/// RAM lighting analysis over SMBus (<c>--ramprobe</c>), read-only. Touches only ENE addresses 0x70–0x73, never SPD hub
+/// (0x50–0x57) or PMIC (0x48–0x4F). Clears up the register address byte order (chip ID 0xF01C both ways), reads name, config, control blocks.
+/// Analyse der RAM-Beleuchtung über SMBus (<c>--ramprobe</c>), nur lesend. Nur ENE-Adressen 0x70–0x73, nie SPD-Hub (0x50–0x57)
+/// oder PMIC (0x48–0x4F). Klärt die Byte-Reihenfolge der Registeradresse (Chip-ID 0xF01C in beiden), liest Name, Konfiguration, Steuerblöcke.
 /// </summary>
 static class RamProbe
 {
@@ -45,7 +45,8 @@ static class RamProbe
         return 0;
     }
 
-    /// <summary>Register wählen (Wort auf Befehl 0x00) und Bytes über Befehl 0x81 lesen (Adresse zählt selbst hoch).</summary>
+    /// <summary>Select a register (word on command 0x00) and read bytes via command 0x81 (address auto-increments).
+    /// Register wählen (Wort auf Befehl 0x00) und Bytes über Befehl 0x81 lesen (Adresse zählt selbst hoch).</summary>
     static byte[] ReadRegister(SmbusPiix4 bus, byte address, ushort register, bool swap, int count)
     {
         ushort word = swap ? (ushort)((register << 8) | (register >> 8)) : register;

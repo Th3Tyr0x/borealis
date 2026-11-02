@@ -6,10 +6,10 @@ using Borealis.Core.Lighting;
 namespace Borealis.Service;
 
 /// <summary>
-/// Hört mit, was der PC abspielt (WASAPI-Loopback auf dem Standard-Wiedergabegerät, wie der LightingService, §5),
-/// und analysiert im eigenen Thread etwa 90-mal pro Sekunde (FFT über 1024 Samples, Vorschub 512):
-/// Pegel, 16 Frequenzbänder, Bass/Mitten/Höhen, Spitzenwerte, Klangschwerpunkt, Beats mit anpassender Schwelle,
-/// Tempo (BPM) und „Drops“. Lautstärkeunabhängig durch automatische Verstärkung. Die Effekte lesen nur das Ergebnis.
+/// Listens to what the PC plays (WASAPI loopback on the default output, §5) and analyzes ~90 times per second in its own thread
+/// (FFT over 1024 samples, hop 512): level, 16 bands, bass/mids/highs, peaks, centroid, adaptive beats, tempo and drops. Auto gain.
+/// Hört mit, was der PC abspielt (WASAPI-Loopback auf dem Standardgerät, §5), und analysiert ~90-mal pro Sekunde im eigenen Thread
+/// (FFT über 1024 Samples, Vorschub 512): Pegel, 16 Bänder, Bass/Mitten/Höhen, Spitzen, Schwerpunkt, Beats, Tempo und Drops. Auto-Verstärkung.
 /// </summary>
 sealed class AudioAnalyzer : IDisposable
 {
@@ -21,7 +21,7 @@ sealed class AudioAnalyzer : IDisposable
     bool loggedStart, loggedError;
     int sampleRate = 48000;
 
-    // Nur im Audio-Thread benutzt
+    // Audio thread only / Nur im Audio-Thread
     readonly float[] window = new float[FftSize];
     int windowFill, windowPos, sinceAnalysis;
     readonly double[] prevMagnitudes = new double[FftSize / 2];
@@ -32,7 +32,7 @@ sealed class AudioAnalyzer : IDisposable
     long lastBeatTick, lastDropTick, lastSampleTick;
     readonly List<long> beatTicks = [];
 
-    // Ergebnis für die Effekte (unter resultLock)
+    // Result for the effects (under resultLock) / Ergebnis für die Effekte (unter resultLock)
     readonly object resultLock = new();
     readonly double[] bands = new double[BandCount];
     readonly double[] bandPeaks = new double[BandCount];
@@ -77,7 +77,7 @@ sealed class AudioAnalyzer : IDisposable
             int bits = Marshal.ReadInt16(format, 14);
             int tag = (ushort)Marshal.ReadInt16(format, 0);
             bool isFloat = tag == 3 || (tag == 0xFFFE && bits == 32 && Marshal.PtrToStructure<Guid>(format + 24) == FloatSubtype);
-            // AUDCLNT_SHAREMODE_SHARED = 0, AUDCLNT_STREAMFLAGS_LOOPBACK = 0x20000, Puffer 100 ms
+            // AUDCLNT_SHAREMODE_SHARED = 0, AUDCLNT_STREAMFLAGS_LOOPBACK = 0x20000, buffer / Puffer 100 ms
             Marshal.ThrowExceptionForHR(client.Initialize(0, 0x20000, 1_000_000, 0, format, IntPtr.Zero));
             var iidCapture = typeof(IAudioCaptureClient).GUID;
             Marshal.ThrowExceptionForHR(client.GetService(ref iidCapture, out var captureObj));
@@ -100,6 +100,7 @@ sealed class AudioAnalyzer : IDisposable
                         capture.ReleaseBuffer(frames);
                         got = true;
                     }
+                    // Loopback is silent in silence: feed zeros so everything decays cleanly
                     // In Stille liefert Loopback nichts: Nullen nachschieben, damit alles sauber abklingt
                     long now = Environment.TickCount64;
                     if (got) lastSampleTick = now;
@@ -150,6 +151,7 @@ sealed class AudioAnalyzer : IDisposable
 
     void Push(float sample)
     {
+        // Ring buffer; the window is read in time order only at analysis
         // Ringpuffer; das Fenster wird erst bei der Analyse in zeitlicher Reihenfolge gelesen
         window[windowPos] = sample;
         windowPos = (windowPos + 1) % FftSize;
@@ -161,7 +163,8 @@ sealed class AudioAnalyzer : IDisposable
         }
     }
 
-    /// <summary>Eine Analyse (alle ~10,7 ms bei 48 kHz).</summary>
+    /// <summary>One analysis (every ~10.7 ms at 48 kHz).
+    /// Eine Analyse (alle ~10,7 ms bei 48 kHz).</summary>
     void Analyze()
     {
         long now = Environment.TickCount64;
@@ -177,6 +180,7 @@ sealed class AudioAnalyzer : IDisposable
         rms = Math.Sqrt(rms / FftSize);
         Fft(buf);
 
+        // Spectral flux (for drops) and bass energy (for beats) from raw values
         // Spektraler Fluss (für Drops) und Bassenergie (für Beats) aus den Rohwerten
         double flux = 0, low = 0, weighted = 0, total = 0;
         double binHz = (double)sampleRate / FftSize;
@@ -190,7 +194,7 @@ sealed class AudioAnalyzer : IDisposable
             if (hz >= 60 && hz <= 12000) { weighted += m * Math.Log2(hz / 60); total += m; }
         }
 
-        // Bänder logarithmisch 40 Hz … 16 kHz, automatisch verstärkt
+        // Log bands 40 Hz … 16 kHz, auto gain / Bänder logarithmisch 40 Hz … 16 kHz, automatisch verstärkt
         double maxDecay = Math.Exp(-dt * 0.12);
         double release = Math.Exp(-dt * 9);
         double peakFall = dt * 0.6;
@@ -210,7 +214,8 @@ sealed class AudioAnalyzer : IDisposable
         double newLevel = Math.Sqrt(Math.Clamp(rms / levelMax, 0, 1));
         bool audible = rms > 0.002;
 
-        // Beat: Bassenergie über Mittelwert + 1,4·Streuung der letzten ~0,7 s, steigend, höchstens alle 270 ms
+        // Beat: bass energy above mean + 1.4·stddev of the last ~0.7 s, rising, at most every 270 ms
+        // Beat: Bassenergie über Mittel + 1,4·Streuung der letzten ~0,7 s, steigend, höchstens alle 270 ms
         double mean = 0, var2 = 0;
         for (int i = 0; i < historyCount; i++) mean += lowHistory[i];
         mean /= Math.Max(1, historyCount);
@@ -231,6 +236,7 @@ sealed class AudioAnalyzer : IDisposable
             }
         }
 
+        // Drop: flux far above its long-term mean at a high level, at most every 2 s
         // Drop: Fluss weit über seinem Langzeitmittel bei hohem Pegel, höchstens alle 2 s
         fluxAverage += (flux - fluxAverage) * dt / 4;
         bool isDrop = audible && newLevel > 0.6 && flux > fluxAverage * 3 && now - lastDropTick > 2000 && fluxAverage > 0;
@@ -255,7 +261,8 @@ sealed class AudioAnalyzer : IDisposable
         }
     }
 
-    /// <summary>Tempo aus dem Median der letzten Beat-Abstände (60–200 BPM, sonst 0).</summary>
+    /// <summary>Tempo from the median of recent beat intervals (60–200 BPM, else 0).
+    /// Tempo aus dem Median der letzten Beat-Abstände (60–200 BPM, sonst 0).</summary>
     double EstimateBpm()
     {
         long[] ticks;
@@ -268,7 +275,8 @@ sealed class AudioAnalyzer : IDisposable
         return median is >= 300 and <= 1000 ? 60000 / median : 0;
     }
 
-    /// <summary>Aktuelles Ergebnis in <paramref name="into"/> schreiben (vom Effekt-Thread je Bild).</summary>
+    /// <summary>Write the current result to <paramref name="into"/> (from the effect thread per frame).
+    /// Aktuelles Ergebnis in <paramref name="into"/> schreiben (vom Effekt-Thread je Bild).</summary>
     public void Read(EffectInputs into)
     {
         long now = Environment.TickCount64;
@@ -296,7 +304,7 @@ sealed class AudioAnalyzer : IDisposable
         into.BeatAges = ages;
         double lastAge = count > 0 ? ages[0] : 99;
         into.Beat = Math.Exp(-lastAge * 7);
-        // Takt-Position: mit Tempo vorausberechnet, sonst seit dem letzten Beat
+        // Bar position: predicted from tempo, else since the last beat / Takt-Position: aus dem Tempo, sonst seit dem letzten Beat
         double period = bpm > 0 ? 60 / bpm : 0.5;
         into.BeatPhase = Math.Clamp(lastAge / period, 0, 1.999) % 1;
     }

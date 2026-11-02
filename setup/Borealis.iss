@@ -1,7 +1,7 @@
-﻿; Installer für Borealis (Inno Setup 7). Bauen mit setup\build_installer.ps1 (baut erst dist\Borealis).
-; Richtet ein: Programmdateien, Dienst BorealisService (startet mit Windows), Tray-App beim Anmelden (Run +
-; StartupApproved, damit Task-Manager und Einstellungen sie zeigen), Startmenü, Eintrag unter „Installierte Apps“.
-; Lädt bei Bedarf die .NET-10-Desktop-Laufzeit (Microsoft) und auf Wunsch PawnIO 2.2.0 (feste Prüfsumme) nach.
+﻿; Borealis installer (Inno Setup 7), built by setup\build_installer.ps1. Installs program files, the service,
+; tray app autostart, Start menu entry; fetches the .NET 10 Desktop Runtime and optionally PawnIO 2.2.0 (fixed hash).
+; Installer für Borealis (Inno Setup 7), gebaut von setup\build_installer.ps1. Richtet Programmdateien, Dienst,
+; Autostart der Tray-App und Startmenü ein; lädt bei Bedarf .NET 10 Desktop Runtime und optional PawnIO 2.2.0 (feste Prüfsumme).
 
 #define DistDir AddBackslash(SourcePath) + "..\dist\Borealis"
 #define AppVersion GetVersionNumbersString(DistDir + "\Borealis.exe")
@@ -17,7 +17,7 @@ AppSupportURL=https://github.com/Th3Tyr0x/borealis/issues
 AppUpdatesURL=https://github.com/Th3Tyr0x/borealis/releases
 AppComments={cm:AppComments}
 AppCopyright=Copyright (C) 2026 The Borealis contributors
-; Versionsinfos der Setup-Datei (Eigenschaften → Details)
+; Version info of the setup file / Versionsinfos der Setup-Datei
 VersionInfoVersion={#AppVersion}
 VersionInfoProductName=Borealis
 VersionInfoProductVersion={#AppVersion}
@@ -25,7 +25,8 @@ VersionInfoDescription=Borealis Setup – lighting and fan control for ASUS moth
 VersionInfoCompany=The Borealis contributors
 VersionInfoCopyright=Copyright (C) 2026 The Borealis contributors
 DefaultDirName={autopf}\Borealis
-; Installationsordner immer anzeigen (Standard „auto“ überspringt ihn bei Updates)
+; Always show the install folder (default "auto" skips it on updates)
+; Installationsordner immer zeigen („auto“ überspringt ihn bei Updates)
 DisableDirPage=no
 DisableProgramGroupPage=yes
 PrivilegesRequired=admin
@@ -41,13 +42,13 @@ UninstallDisplayName=Borealis
 WizardStyle=modern dynamic
 Compression=lzma2/max
 SolidCompression=yes
-; Dienst und App beendet der Installer selbst (PrepareToInstall)
+; Service and app are stopped in PrepareToInstall / Dienst und App beendet PrepareToInstall
 CloseApplications=no
 RestartApplications=no
-; Der Autostart der App gilt für den Benutzer, der installiert
+; App autostart applies to the installing user / Autostart gilt für den installierenden Benutzer
 UsedUserAreasWarning=no
 #ifdef SignThumbprint
-; Setup und Deinstaller signieren (build_installer.ps1 -CertThumbprint …)
+; Sign setup and uninstaller (build_installer.ps1 -CertThumbprint …) / Setup und Deinstaller signieren
 SignTool=borealis
 SignedUninstaller=yes
 #endif
@@ -118,7 +119,8 @@ Name: "{autoprograms}\Borealis"; Filename: "{app}\Borealis.exe"
 Name: "{autodesktop}\Borealis"; Filename: "{app}\Borealis.exe"; Tasks: desktopicon
 
 [Registry]
-; Autostart der Tray-App; ohne StartupApproved fehlt sie im Task-Manager unter „Autostart-Apps“ (02 = aktiviert)
+; Tray app autostart; StartupApproved (02 = enabled) makes it show in Task Manager
+; Autostart der Tray-App; StartupApproved (02 = an) zeigt ihn im Task-Manager
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Borealis"; \
   ValueData: """{app}\Borealis.exe"" --minimized"; Flags: uninsdeletevalue; Tasks: autostart
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run"; ValueType: binary; \
@@ -146,7 +148,7 @@ var
   PrereqPage: TInputOptionWizardPage;
   NeedDotNet, NeedPawnIo, RebootNeeded: Boolean;
 
-{ Installierte .NET-10-Desktop-Laufzeit (Versionsordner, z. B. „10.0.14“), sonst leer }
+{ Installed .NET 10 Desktop Runtime (version folder, e.g. "10.0.14"), else empty / Installierte .NET-10-Desktop-Laufzeit, sonst leer }
 function DotNetDesktop10Version: String;
 var
   FindRec: TFindRec;
@@ -175,7 +177,7 @@ begin
   DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), nil);
   DownloadPage.ShowBaseNameInsteadOfUrl := True;
 
-  { Seite „Voraussetzungen“ nach der Ordnerwahl: Stand von .NET, Wahl für PawnIO }
+  { "Requirements" page after the folder choice: .NET state, PawnIO choice / Seite „Voraussetzungen“: Stand von .NET, Wahl für PawnIO }
   if DotNetDesktop10Installed then
     DotNetText := FmtMessage(CustomMessage('DotNetPresent'), [DotNetDesktop10Version])
   else
@@ -190,7 +192,7 @@ begin
   end;
 end;
 
-{ PawnIO einrichten? Im stillen Modus abschaltbar mit /PAWNIO=0 }
+{ Set up PawnIO? Can be turned off in silent mode with /PAWNIO=0 / PawnIO einrichten? Still abschaltbar mit /PAWNIO=0 }
 function WantPawnIo: Boolean;
 begin
   if PawnIoInstalled then
@@ -201,7 +203,7 @@ begin
     Result := PrereqPage.Values[0];
 end;
 
-{ Zusammenfassung vor dem Installieren um die Voraussetzungen ergänzen }
+{ Add the requirements to the summary before installing / Voraussetzungen in die Zusammenfassung aufnehmen }
 function UpdateReadyMemo(Space, NewLine, MemoUserInfoInfo, MemoDirInfo, MemoTypeInfo, MemoComponentsInfo, MemoGroupInfo, MemoTasksInfo: String): String;
 var
   DotNetLine, PawnIoLine: String;
@@ -215,7 +217,7 @@ begin
   if MemoTasksInfo <> '' then Result := Result + NewLine + NewLine + MemoTasksInfo;
 end;
 
-{ Laufenden Dienst und App beenden, damit ihre Dateien ersetzt werden können }
+{ Stop the running service and app so their files can be replaced / Laufenden Dienst und App beenden, damit ihre Dateien ersetzt werden können }
 procedure StopBorealis;
 var
   Code: Integer;
@@ -227,7 +229,7 @@ begin
   Sleep(500);
 end;
 
-{ .NET und PawnIO nur laden, wenn sie fehlen; PawnIO mit fester Prüfsumme }
+{ Download .NET and PawnIO only if missing; PawnIO with a fixed hash / .NET und PawnIO nur laden, wenn sie fehlen; PawnIO mit fester Prüfsumme }
 function DownloadPrerequisites: String;
 begin
   Result := '';
@@ -260,7 +262,7 @@ begin
   if Result = '' then StopBorealis;
 end;
 
-{ Installer still ausführen; 0 = ok, 3010 = Neustart nötig, 1638 = neuere Version schon da }
+{ Run an installer silently; 0 = OK, 3010 = reboot needed, 1638 = newer already there / Installer still ausführen; 3010 = Neustart nötig, 1638 = neuere Version da }
 function RunSetup(const FileName, Params, Status: String; var Code: Integer): Boolean;
 begin
   WizardForm.StatusLabel.Caption := Status;
@@ -291,7 +293,7 @@ begin
   Result := RebootNeeded;
 end;
 
-{ Beim Entfernen fragen, ob auch die Einstellungen weg sollen (Standard: behalten) }
+{ On uninstall ask whether to remove settings too (default: keep) / Beim Entfernen fragen, ob auch die Einstellungen weg sollen (Standard: behalten) }
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if (CurUninstallStep = usPostUninstall) and

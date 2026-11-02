@@ -4,7 +4,8 @@ using Borealis.Core.Lighting;
 
 namespace Borealis.App.Controls;
 
-/// <summary>Strich-Symbole (24×24) für Effekte, im Stil der Effekt-Kacheln von Armoury Crate.</summary>
+/// <summary>Line icons (24×24) for effects.
+/// Strich-Symbole (24×24) für Effekte.</summary>
 static class Icons
 {
     static readonly Dictionary<FirmwareEffect, Geometry> Effects = new()
@@ -14,7 +15,8 @@ static class Icons
         [FirmwareEffect.Strobing] = Parse("M13,2 L5,13 L11,13 L10,22 L19,10 L13,10 Z"),
         [FirmwareEffect.ColorCycle] = Parse("M20,12 A8,8 0 1 1 17.66,6.34 M20,3 L20,8 L15,8"),
         [FirmwareEffect.Rainbow] = Parse("M2.5,18 A9.5,9.5 0 0 1 21.5,18 M6,18 A6,6 0 0 1 18,18 M9.5,18 A2.5,2.5 0 0 1 14.5,18"),
-        // Komet: Kopf mit Kern, gewölbter Schweif nach links unten
+        // Comet: head with core, curved tail to the lower left
+        // Komet: Kopf mit Kern, gebogener Schweif nach links unten
         [FirmwareEffect.Comet] = Parse("M18.3,11.87 A4.5,4.5 0 1 0 12.13,5.7 Q6.72,12.5 3,21 Q11.5,17.29 18.3,11.87 Z M18.2,8 A2.2,2.2 0 1 0 13.8,8 A2.2,2.2 0 1 0 18.2,8 Z"),
         [FirmwareEffect.FlashAndDash] = Parse("M2,12 L6,12 M9,12 L13,12 M16,12 L22,12 M4,7 L10,7 M14,17 L20,17"),
         [FirmwareEffect.Wave] = Parse("M2,12 C5,4 8,4 10,12 C12,20 15,20 17,12 C18.5,6 20.5,6 22,9"),
@@ -22,7 +24,8 @@ static class Icons
         [FirmwareEffect.StarryNight] = Parse("M7,3 L8,7 L12,8 L8,9 L7,13 L6,9 L2,8 L6,7 Z M17,11 L17.8,14.2 L21,15 L17.8,15.8 L17,19 L16.2,15.8 L13,15 L16.2,14.2 Z M17,3 L17,5 M16,4 L18,4"),
         [FirmwareEffect.Off] = Parse("M12,3 L12,11 M7,6 A8,8 0 1 0 17,6"),
         [FirmwareEffect.BreathRainbow] = Parse("M12,9 A2,2 0 1 1 11.99,9 Z M2.5,19 A9.5,9.5 0 0 1 21.5,19 M6,19 A6,6 0 0 1 18,19"),
-        // Regenbogen-Komet: derselbe Umriss, innen eine zweite Schicht als Farbband
+        // Rainbow comet: same outline, inner layer as a color band
+        // Regenbogen-Komet: gleicher Umriss, innen ein Farbband
         [FirmwareEffect.RainbowComet] = Parse("M18.3,11.87 A4.5,4.5 0 1 0 12.13,5.7 Q6.72,12.5 3,21 Q11.5,17.29 18.3,11.87 Z M17.28,9.79 A2.2,2.2 0 1 0 14.21,6.72 Q10.1,11.36 7,17 Q12.63,13.9 17.28,9.79 Z"),
         [FirmwareEffect.MovingFlash] = Parse("M2,8 L8,8 M10,12 L16,12 M17,16 L22,16 M4,16 L9,16 M14,8 L18,8"),
         [FirmwareEffect.Fireworks] = Parse("M12,12 L12,3 M12,12 L18.5,6 M12,12 L21,13 M12,12 L16.5,20 M12,12 L7.5,20 M12,12 L3,13 M12,12 L5.5,6"),

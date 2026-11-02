@@ -4,18 +4,19 @@ using Borealis.Core.Hardware;
 namespace Borealis.Core.Lighting;
 
 /// <summary>
-/// RAM-Beleuchtung direkt über SMBus (PawnIO, Modul SmbusPIIX4) statt über die ENE-HAL; Ablauf wie die HAL
-/// (<c>AacHal_x64.dll</c>, docs/hardware.md §3) für DIMMs mit ENE-Controller der ASUS-Familie
-/// (Chip-ID 0x68, Firmware z. B. „AUDA0-E6K5-0101“).
+/// RAM lighting directly over SMBus (PawnIO, SmbusPIIX4) instead of the ENE HAL, same sequence as the HAL
+/// (docs/hardware.md §3) for DIMMs with an ASUS-family ENE controller (chip ID 0x68).
+/// RAM-Beleuchtung direkt über SMBus (PawnIO, SmbusPIIX4) statt über die ENE-HAL, Ablauf wie die HAL
+/// (docs/hardware.md §3) für DIMMs mit ENE-Controller der ASUS-Familie (Chip-ID 0x68).
 /// <list type="bullet">
-/// <item>Register wählen: Wort auf Befehl 0x00, Registeradresse mit dem hohen Byte zuerst auf dem Bus.</item>
-/// <item>Schreiben: SMBus-Blöcke bis 24 Byte auf Befehl 0x03, sonst Byte für Byte auf Befehl 0x01 (die Adresse zählt
-/// selbst hoch); Lesen: Befehl 0x81. Ob Blöcke gehen, prüft <see cref="Open"/> einmal mit unveränderten Farben.</item>
-/// <item>Farben je LED als R, B, G: direkt ab 0x8100, für Firmware-Effekte ab 0x8160.</item>
-/// <item>Steuerblock ab 0x8020 (16 Byte): Direktmodus, Effekt, Geschwindigkeit, Richtung; 0x802F = übernehmen.</item>
+/// <item>Select register: word on command 0x00, address high byte first. / Register wählen: Wort auf Befehl 0x00, hohes Byte zuerst.</item>
+/// <item>Write: blocks up to 24 bytes on 0x03, else byte by byte on 0x01; read: 0x81. <see cref="Open"/> tests blocks once.
+/// Schreiben: Blöcke bis 24 Byte auf 0x03, sonst Byte für Byte auf 0x01; Lesen: 0x81. <see cref="Open"/> prüft Blöcke einmal.</item>
+/// <item>Colors per LED as R, B, G: direct from 0x8100, firmware effects from 0x8160. / Farben je LED als R, B, G: direkt ab 0x8100, Firmware ab 0x8160.</item>
+/// <item>Control block at 0x8020 (16 bytes): direct mode, effect, speed, direction; 0x802F = apply. / Steuerblock ab 0x8020; 0x802F = übernehmen.</item>
 /// </list>
-/// Angesprochen werden nur 0x70–0x77, und geschrieben wird nur auf Adressen, die sich mit Chip-ID und Namen als
-/// ENE-RAM ausweisen; SPD-Hub (0x50–0x57) und PMIC (0x48–0x4F) der DDR5-Module nie.
+/// Only 0x70–0x77 are touched, and only addresses identified as ENE RAM are written; never SPD hub (0x50–0x57) or PMIC (0x48–0x4F).
+/// Nur 0x70–0x77 werden angesprochen und nur als ENE-RAM erkannte Adressen beschrieben; nie SPD-Hub (0x50–0x57) oder PMIC (0x48–0x4F).
 /// </summary>
 public sealed class EneSmbusRam : IRamLights
 {
@@ -30,6 +31,7 @@ public sealed class EneSmbusRam : IRamLights
     sealed class Dimm(byte address, byte[] control)
     {
         public byte Address { get; } = address;
+        // Last written control block; bytes 4–14 stay as the controller had them
         // Zuletzt geschriebener Steuerblock; Bytes 4–14 bleiben, wie der Controller sie hatte
         public byte[] Control { get; } = control;
         public RamEffect? Effect { get; set; }
@@ -51,7 +53,8 @@ public sealed class EneSmbusRam : IRamLights
         Modules = found.Select(f => f.Module).ToArray();
     }
 
-    /// <summary>ENE-DIMMs auf Port 0 suchen; null, wenn keine gefunden wurden. Wirft, wenn PawnIO fehlt.</summary>
+    /// <summary>Find ENE DIMMs on port 0; null if none. Throws without PawnIO.
+    /// ENE-DIMMs auf Port 0 suchen; null, wenn keine. Wirft ohne PawnIO.</summary>
     public static EneSmbusRam? Open()
     {
         var bus = SmbusPiix4.Open();
@@ -64,7 +67,7 @@ public sealed class EneSmbusRam : IRamLights
                 if (!probeLock.Enter(2000)) throw new TimeoutException("SMBus-Sperre nicht frei.");
                 try
                 {
-                    // Nur Adressen, an denen jemand antwortet, bekommen eine Registerwahl
+                    // Only addresses that answer get a register select / Nur Adressen, die antworten, bekommen eine Registerwahl
                     try { bus.ReceiveByte(address); }
                     catch (IOException) { continue; }
                     if (Read(bus, address, RegChipId, 1)[0] != ChipAsus) continue;
@@ -97,8 +100,8 @@ public sealed class EneSmbusRam : IRamLights
     }
 
     /// <summary>
-    /// Effekt mit Farben je LED. <see cref="RamEffect.Direct"/> = Farben direkt anzeigen (schnell, ohne Steuerblock,
-    /// solange der Modus gleich bleibt); sonst übernimmt die Firmware des DIMMs den Effekt.
+    /// Effect with colors per LED. <see cref="RamEffect.Direct"/> shows colors directly (fast, no control block while the mode stays); otherwise the DIMM firmware runs it.
+    /// Effekt mit Farben je LED. <see cref="RamEffect.Direct"/> zeigt die Farben direkt (schnell, ohne Steuerblock, solange der Modus bleibt); sonst spielt ihn die DIMM-Firmware.
     /// </summary>
     public void SetEffect(int module, RamEffect effect, IReadOnlyList<Rgb> colors)
     {
@@ -119,9 +122,9 @@ public sealed class EneSmbusRam : IRamLights
             if (dimm.Effect == effect && direct) return;
             dimm.Control[0] = (byte)(direct ? 1 : 0);
             dimm.Control[1] = (byte)(direct ? 0 : effect == RamEffect.Default ? 5 : (int)effect);
-            dimm.Control[2] = 0;   // Geschwindigkeit: normal
-            dimm.Control[3] = 0;   // Richtung
-            dimm.Control[15] = 1;  // 0x802F: übernehmen
+            dimm.Control[2] = 0; // Speed: normal / Geschwindigkeit: normal
+            dimm.Control[3] = 0; // Direction / Richtung
+            dimm.Control[15] = 1; // 0x802F: apply / übernehmen
             Write(bus, dimm.Address, RegControl, dimm.Control, blocks);
             dimm.Effect = effect;
         }
@@ -153,7 +156,8 @@ public sealed class EneSmbusRam : IRamLights
             foreach (var b in data) bus.WriteByteData(address, CmdWrite, b);
     }
 
-    /// <summary>Die gerade angezeigten Direktfarben als Block zurückschreiben und vergleichen (sichtbar ändert sich nichts).</summary>
+    /// <summary>Write the shown direct colors back as a block and compare (nothing visible changes).
+    /// Angezeigte Direktfarben als Block zurückschreiben und vergleichen (sichtbar ändert sich nichts).</summary>
     static bool BlocksWork(SmbusPiix4 bus, byte address, int length)
     {
         try

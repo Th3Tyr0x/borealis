@@ -2,13 +2,15 @@ using System.Globalization;
 
 namespace Borealis.Core.Lighting;
 
-/// <summary>Eine Farbe mit 8 Bit je Kanal.</summary>
+/// <summary>A color with 8 bits per channel.
+/// Eine Farbe mit 8 Bit je Kanal.</summary>
 public readonly record struct Rgb(byte R, byte G, byte B)
 {
     public static readonly Rgb Black = new(0, 0, 0);
     public static readonly Rgb White = new(255, 255, 255);
 
-    /// <summary>Liest "RRGGBB" oder "#RRGGBB".</summary>
+    /// <summary>Parses "RRGGBB" or "#RRGGBB".
+    /// Liest "RRGGBB" oder "#RRGGBB".</summary>
     public static Rgb Parse(string text)
     {
         if (!TryParse(text, out var rgb)) throw new FormatException($"Ungültige Farbe „{text}“ (erwartet RRGGBB).");
@@ -25,12 +27,14 @@ public readonly record struct Rgb(byte R, byte G, byte B)
         return true;
     }
 
-    /// <summary>Farbe als 0x00BBGGRR, wie sie die Aura-HALs (ENE-RAM) erwarten.</summary>
+    /// <summary>Color as 0x00BBGGRR, as the ENE RAM HAL expects.
+    /// Farbe als 0x00BBGGRR, wie die ENE-RAM-HAL sie erwartet.</summary>
     public uint ToBgr() => (uint)(R | (G << 8) | (B << 16));
 
     public override string ToString() => $"{R:X2}{G:X2}{B:X2}";
 
-    /// <summary>Farbe aus Farbton (0–1, wird umgebrochen), voller Sättigung und Helligkeit 0–1.</summary>
+    /// <summary>Color from hue (0–1, wraps), full saturation and brightness 0–1.
+    /// Farbe aus Farbton (0–1, umgebrochen), voller Sättigung und Helligkeit 0–1.</summary>
     public static Rgb FromHue(double hue, double brightness = 1.0)
     {
         double h = hue % 1.0;

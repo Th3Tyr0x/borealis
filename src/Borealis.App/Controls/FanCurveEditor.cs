@@ -8,9 +8,10 @@ using Borealis.Core.Profiles;
 namespace Borealis.App.Controls;
 
 /// <summary>
-/// Lüfterkurve mit vier verschiebbaren Punkten (Temperatur → Leistung). Der letzte Punkt liegt fest bei 100 %;
-/// Temperaturen steigen, die Leistung fällt nicht (<see cref="FanSettings.Normalize"/>). Meldet die Kurve erst beim
-/// Loslassen (<see cref="CurveCommitted"/>), damit der Chip nicht bei jeder Mausbewegung beschrieben wird.
+/// Fan curve with four draggable points (temperature → duty); the last one is fixed at 100 %. Reports on release
+/// (<see cref="CurveCommitted"/>) so the chip isn't written on every mouse move.
+/// Lüfterkurve mit vier verschiebbaren Punkten (Temperatur → Leistung); der letzte liegt fest bei 100 %. Meldet erst
+/// beim Loslassen (<see cref="CurveCommitted"/>), damit der Chip nicht bei jeder Mausbewegung beschrieben wird.
 /// </summary>
 public sealed class FanCurveEditor : UserControl
 {
@@ -20,13 +21,15 @@ public sealed class FanCurveEditor : UserControl
     readonly Canvas canvas = new() { Width = W, Height = H, Background = Brushes.Transparent, ClipToBounds = false };
     readonly Polyline line = new() { StrokeThickness = 2.5, StrokeLineJoin = PenLineJoin.Round };
     readonly Polygon area = new();
-    // Vergleichskurve (gestrichelt), z. B. derselbe Modus ohne Auto-Tuning
+    // Dashed comparison curve, e.g. the same mode without auto-tuning
+    // Gestrichelte Vergleichskurve, z. B. derselbe Modus ohne Auto-Tuning
     readonly Polyline reference = new() { StrokeThickness = 1.5, StrokeDashArray = [5, 4], StrokeLineJoin = PenLineJoin.Round };
     readonly Line marker = new() { StrokeThickness = 1.5, StrokeDashArray = [4, 3] };
     readonly TextBlock markerText = new() { FontSize = 11 };
     readonly Ellipse markerDot = new() { Width = 10, Height = 10 };
     readonly Line floor = new() { StrokeThickness = 1.2, StrokeDashArray = [2, 3] };
     readonly TextBlock floorText = new() { FontSize = 11 };
+    // Right axis: measured RPM per duty (after auto-tuning)
     // Rechte Achse: gemessene Drehzahl je Leistung (nach dem Auto-Tuning)
     readonly TextBlock[] rpmLabels = new TextBlock[6];
     readonly TextBlock dragText = new() { FontSize = 12, FontWeight = FontWeights.SemiBold, Visibility = Visibility.Collapsed };
@@ -37,7 +40,8 @@ public sealed class FanCurveEditor : UserControl
     double? currentTemp;
     FanTuning? tuning;
 
-    /// <summary>Kurve wurde verändert (nach dem Loslassen eines Punktes).</summary>
+    /// <summary>Curve changed (after releasing a point).
+    /// Kurve geändert (nach dem Loslassen eines Punktes).</summary>
     public event Action<List<FanPoint>>? CurveCommitted;
 
     public FanCurveEditor()
@@ -53,7 +57,7 @@ public sealed class FanCurveEditor : UserControl
         markerDot.Fill = (Brush)Application.Current.FindResource("Text");
         dragText.Foreground = (Brush)Application.Current.FindResource("Text");
 
-        // Raster: alle 10 °C und 20 %
+        // Grid: every 10 °C and 20 % / Raster: alle 10 °C und 20 %
         for (int t = TMin; t <= TMax; t += 10)
         {
             canvas.Children.Add(new Line { X1 = X(t), X2 = X(t), Y1 = Y(0), Y2 = Y(100), Stroke = lineBrush, StrokeThickness = 1 });
@@ -115,8 +119,10 @@ public sealed class FanCurveEditor : UserControl
         Redraw();
     }
 
-    /// <summary>Kurve anzeigen; <paramref name="editable"/> = Punkte verschiebbar.</summary>
-    /// <summary>Vergleichskurve gestrichelt einblenden; null blendet sie aus.</summary>
+    /// <summary>Show a curve; <paramref name="editable"/> = points can be dragged.
+    /// Kurve zeigen; <paramref name="editable"/> = Punkte verschiebbar.</summary>
+    /// <summary>Show a dashed comparison curve; null hides it.
+    /// Gestrichelte Vergleichskurve zeigen; null blendet sie aus.</summary>
     public void SetReference(IReadOnlyList<FanPoint>? curve)
     {
         if (curve == null) { reference.Visibility = Visibility.Collapsed; return; }
@@ -136,14 +142,16 @@ public sealed class FanCurveEditor : UserControl
         Redraw();
     }
 
-    /// <summary>Aktuelle Temperatur der Quelle als Markierung (null = ausblenden).</summary>
+    /// <summary>Current source temperature as a marker (null = hide).
+    /// Aktuelle Temperatur der Quelle als Markierung (null = aus).</summary>
     public double? CurrentTemp
     {
         get => currentTemp;
         set { currentTemp = value; Redraw(); }
     }
 
-    /// <summary>Name der Temperaturquelle in der Markierung („CPU“, „Mainboard“ …).</summary>
+    /// <summary>Temperature source name in the marker ("CPU", "Motherboard" …).
+    /// Name der Temperaturquelle in der Markierung („CPU“, „Mainboard“ …).</summary>
     public string SourceName
     {
         get => sourceName;
@@ -151,7 +159,8 @@ public sealed class FanCurveEditor : UserControl
     }
     string sourceName = "CPU";
 
-    /// <summary>Ergebnis des Auto-Tunings: zeigt die Mindestleistung und die geschätzte Drehzahl.</summary>
+    /// <summary>Auto-tuning result: shows minimum duty and estimated RPM.
+    /// Ergebnis des Auto-Tunings: Mindestleistung und geschätzte Drehzahl.</summary>
     public FanTuning? Tuning
     {
         get => tuning;
@@ -167,9 +176,11 @@ public sealed class FanCurveEditor : UserControl
     {
         var next = points.Select(x => new FanPoint(x.Temp, x.Duty)).ToList();
         next[dragging].Temp = (int)Math.Round(TempAt(p.X));
+        // The last point stays at 100 %, only its temperature moves
         // Der letzte Punkt bleibt bei 100 %, nur die Temperatur ist verschiebbar
         if (dragging < 3) next[dragging].Duty = (int)Math.Round(DutyAt(p.Y));
-        // Nachbarn nicht überholen: Temperatur zwischen den Nachbarn, Leistung zwischen deren Leistung
+        // Don't pass the neighbors: temperature and duty stay between them
+        // Nachbarn nicht überholen: Temperatur und Leistung bleiben dazwischen
         int lowT = dragging == 0 ? FanSettings.MinTemp : next[dragging - 1].Temp + 1;
         int highT = dragging == 3 ? FanSettings.MaxTemp : next[dragging + 1].Temp - 1;
         next[dragging].Temp = Math.Clamp(next[dragging].Temp, lowT, Math.Max(lowT, highT));
@@ -204,7 +215,8 @@ public sealed class FanCurveEditor : UserControl
         for (int i = 0; i < rpmLabels.Length; i++)
             rpmLabels[i].Text = tuning != null && tuning.Rpm.Length > 1 ? $"{tuning.RpmAt(i * 20):N0} {Loc.T("U/min", "RPM")}" : "";
 
-        // Untergrenze: sicher laufen/anlaufen, bei Lüftern ohne Stillstand ab wann sie schneller werden
+        // Lower limit: safe running/start-up; for fans without stop, where they start to speed up
+        // Untergrenze: sicheres Laufen/Anlaufen; bei Lüftern ohne Stillstand, ab wann sie schneller werden
         int safe = tuning?.SafeDuty ?? 0, effective = tuning?.EffectiveDuty ?? 0;
         int lowest = Math.Max(safe, effective);
         floor.Visibility = floorText.Visibility = lowest > 0 ? Visibility.Visible : Visibility.Collapsed;

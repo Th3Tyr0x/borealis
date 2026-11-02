@@ -1,6 +1,5 @@
-﻿# Ladetest vor Installation oder Release: Lässt Windows (Smart App Control, App-Steuerung) die gebauten Dateien
-# in dist\Borealis laden? Ohne Adminrechte, ändert nichts. Unsignierte Builds bewertet Smart App Control je Datei neu;
-# wird etwas blockiert, hilft oft schon ein Build mit leicht geändertem Inhalt.
+﻿# Load test before installing or releasing: does Windows (Smart App Control) let dist\Borealis load? No admin, changes nothing.
+# Ladetest vor Installation oder Release: Lässt Windows (Smart App Control) dist\Borealis laden? Ohne Adminrechte, ändert nichts.
 param([string]$Dist = (Join-Path $PSScriptRoot '..\dist\Borealis'))
 
 $start = Get-Date

@@ -8,8 +8,8 @@ using Borealis.Core.Windows;
 namespace Borealis.Service;
 
 /// <summary>
-/// Zustand des Dienstes: Einstellungen, Profile und die geöffnete Hardware. Alle Hardwarezugriffe laufen
-/// nacheinander über <see cref="gate"/>; der Dienst läuft in MTA-Threads, wie es die ENE-RAM-HAL verlangt.
+/// Service state: settings, profiles and open hardware. All hardware access runs serially through <see cref="gate"/>; MTA threads (ENE RAM HAL).
+/// Zustand des Dienstes: Einstellungen, Profile, geöffnete Hardware. Alle Hardwarezugriffe laufen nacheinander über <see cref="gate"/>; MTA-Threads (ENE-RAM-HAL).
 /// </summary>
 sealed class BorealisRuntime : IDisposable
 {
@@ -18,15 +18,16 @@ sealed class BorealisRuntime : IDisposable
     BorealisSettings settings = new();
     LightingEngine? engine;
     string? hardwareError;
-    // Gemeinsame Sperre für Hardwarezugriffe von Befehlen und Effekt-Schleife
+    // Shared hardware lock for commands and the effect loop / Gemeinsame Hardware-Sperre für Befehle und Effekt-Schleife
     readonly object hw = new();
     readonly EffectRunner runner;
     readonly SensorMonitor sensors;
     readonly FanController fans = new();
     readonly FanTuner tuner;
     string? fanError;
-    // Abgleich-Modus: Referenzfarbe auf allen Zonen statt des Profils
+    // Calibration mode: reference color on all zones instead of the profile / Abgleich-Modus: Referenzfarbe statt Profil
     Rgb? calibrationColor;
+    // Calibration changed, standby effect in the controller still has old colors (rewritten in a batch)
     // Farbabgleich geändert, Standby-Effekt im Controller noch mit alten Farben (wird gebündelt nachgeschrieben)
     bool standbyStale;
 
@@ -48,6 +49,7 @@ sealed class BorealisRuntime : IDisposable
             if (settings.Fans.Enabled) ApplyFansLocked("beim Start");
             if (!settings.Configured)
             {
+                // Never saved: change nothing until the user saves a profile in the app
                 // Noch nie gespeichert: nichts ändern, bis der Benutzer in der App ein Profil speichert
                 Log.Info("Noch kein Profil gespeichert: Beleuchtung bleibt unverändert.");
                 EnsureEngine();
@@ -63,7 +65,8 @@ sealed class BorealisRuntime : IDisposable
         finally { gate.Release(); }
     }
 
-    /// <summary>Nach dem Aufwachen: Geräte neu öffnen (Handles können ungültig sein) und Profil erneut anwenden.</summary>
+    /// <summary>After wake-up: reopen devices (handles may be invalid) and reapply the profile.
+    /// Nach dem Aufwachen: Geräte neu öffnen (Handles können ungültig sein) und Profil erneut anwenden.</summary>
     public async Task OnResumeAsync()
     {
         bool lighting = settings.ReapplyOnResume && settings.Configured;
@@ -72,7 +75,7 @@ sealed class BorealisRuntime : IDisposable
         await gate.WaitAsync();
         try
         {
-            // Das BIOS setzt nach dem Aufwachen seine eigenen Lüfterkurven
+            // The BIOS sets its own fan curves after wake-up / Das BIOS setzt nach dem Aufwachen eigene Lüfterkurven
             if (settings.Fans.Enabled)
             {
                 fans.Reset();
@@ -90,7 +93,8 @@ sealed class BorealisRuntime : IDisposable
 
     public async Task<PipeResponse> HandleAsync(PipeRequest request, CancellationToken token)
     {
-        // Sensoren laufen in eigenem Thread und brauchen die Beleuchtungs-Sperre nicht
+        // Sensors run in their own thread and don't need the lighting lock
+        // Sensoren laufen im eigenen Thread und brauchen die Beleuchtungs-Sperre nicht
         if (request.Command == Commands.Sensors) return new PipeResponse { Sensors = sensors.Latest, Tune = tuner.Status };
         await gate.WaitAsync(token);
         try
@@ -109,7 +113,8 @@ sealed class BorealisRuntime : IDisposable
                     var p = Require(request.Profile);
                     if (string.IsNullOrWhiteSpace(p.Name)) return PipeResponse.Fail("Profilname fehlt.");
                     p.Name = p.Name.Trim();
-                    // Standby-Effekte nur schreiben, wenn sie sich geändert haben (die App speichert automatisch)
+                    // Write standby effects only when changed (the app saves automatically)
+                    // Standby-Effekte nur bei Änderung schreiben (die App speichert automatisch)
                     var old = store.LoadProfile(p.Name);
                     bool standbyChanged = old == null || !settings.Configured || !string.Equals(old.Name, settings.ActiveProfile, StringComparison.CurrentCultureIgnoreCase)
                         || StandbyJson(old) != StandbyJson(p);
@@ -169,7 +174,8 @@ sealed class BorealisRuntime : IDisposable
                     if (calibrationChanged)
                     {
                         Log.Info($"Farbabgleich: {(calibration.Count == 0 ? "neutral" : string.Join(", ", calibration.Select(k => $"{k.Key} R{k.Value.Red} G{k.Value.Green} B{k.Value.Blue} {k.Value.Order}")))}.");
-                        // Standby-Effekt nicht bei jedem Schieberegler-Schritt schreiben, sondern beim Verlassen des Abgleichs
+                        // Don't write the standby effect on every slider step, but when leaving calibration
+                        // Standby-Effekt nicht bei jedem Reglerschritt schreiben, sondern beim Verlassen des Abgleichs
                         standbyStale = true;
                         if (calibrationColor is { } c) { ShowCalibration(c); return new PipeResponse { Status = BuildStatus() }; }
                     }
@@ -184,8 +190,8 @@ sealed class BorealisRuntime : IDisposable
 
                 case Commands.AsusLightingService:
                 {
-                    // Armoury Crate die Beleuchtung zurückgeben (start) oder wegnehmen (stop).
-                    // Die Einstellung merkt sich das, sonst hält die Überwachung den Dienst sofort wieder an.
+                    // Give lighting back to Armoury Crate (start) or take it (stop); stored, or the watchdog would stop the service again
+                    // Beleuchtung an Armoury Crate zurückgeben (start) oder wegnehmen (stop); gespeichert, sonst hält die Überwachung den Dienst wieder an
                     if (request.Name == "start")
                     {
                         settings.StopAsusLightingService = false;
@@ -229,6 +235,7 @@ sealed class BorealisRuntime : IDisposable
                 case Commands.Reapply:
                     if (!settings.Configured)
                     {
+                        // Never saved: undoing the preview means letting Armoury Crate take over again
                         // Noch nie gespeichert: Vorschau zurücknehmen heißt, Armoury Crate wieder übernehmen lassen
                         ServiceControl.Start(ServiceControl.AsusLightingService);
                         return new PipeResponse { Status = BuildStatus(), Notes = ["Armoury-Crate-Beleuchtung wiederhergestellt."] };
@@ -243,7 +250,8 @@ sealed class BorealisRuntime : IDisposable
                     runner.Pause();
                     int after;
                     lock (hw) after = e.SetLedCount(zone, request.Count);
-                    // Der Controller kennt die Anzahl jetzt selbst; eine Streaming-Begrenzung ist nicht mehr nötig
+                    // The controller knows the count now; no streaming limit needed
+                    // Der Controller kennt die Anzahl jetzt; keine Streaming-Begrenzung mehr nötig
                     settings.LedCounts.Remove(zone.Id);
                     store.SaveSettings(settings);
                     Log.Info($"LED-Anzahl {zone.Id}: {before} → {request.Count} (Controller meldet {after}).");
@@ -290,6 +298,7 @@ sealed class BorealisRuntime : IDisposable
                         return new PipeResponse { Status = BuildStatus(), Tune = tuner.Status };
                     }
                     if (!settings.Fans.Enabled) return PipeResponse.Fail("Das Auto-Tuning geht nur, wenn Borealis die Lüfter steuert.");
+                    // "start" = all; "only:CPUFAN,AUXFAN4" = just these; "pump" = pumps only (older app)
                     // "start" = alle; "only:CPUFAN,AUXFAN4" = nur diese; "pump" = nur Pumpen (ältere App)
                     IReadOnlyCollection<string>? only = request.Name switch
                     {
@@ -349,6 +358,7 @@ sealed class BorealisRuntime : IDisposable
         try { return Apply(engine); }
         catch (IOException)
         {
+            // USB handle invalid after standby or re-login: reopen once and retry
             // USB-Handle nach Standby oder Neuanmeldung ungültig: einmal neu öffnen und wiederholen
             CloseEngine();
             engine = EnsureEngine() ?? throw new IOException(hardwareError ?? "Beleuchtung nicht verfügbar.");
@@ -357,7 +367,8 @@ sealed class BorealisRuntime : IDisposable
         }
     }
 
-    /// <summary>Abgleich-Modus: Effekte anhalten und alle Zonen in der Referenzfarbe (mit Farbabgleich) zeigen.</summary>
+    /// <summary>Calibration mode: stop effects and show all zones in the reference color (calibrated).
+    /// Abgleich-Modus: Effekte anhalten und alle Zonen in der Referenzfarbe (mit Abgleich) zeigen.</summary>
     void ShowCalibration(Rgb color)
     {
         StopAsusLightingServiceIfWanted();
@@ -377,8 +388,10 @@ sealed class BorealisRuntime : IDisposable
     }
 
     /// <summary>
-    /// Armoury Crate startet den LightingService neu, sobald er angehalten wird. Solange Borealis die Beleuchtung
-    /// steuern soll, wird er hier wieder angehalten und das Profil neu angewendet (er streamt beim Start sein Profil).
+    /// Armoury Crate restarts the LightingService as soon as it stops. While Borealis controls lighting, it is stopped again here
+    /// and the profile reapplied (the service streams its own profile at start).
+    /// Armoury Crate startet den LightingService neu, sobald er angehalten wird. Solange Borealis das Licht steuert, wird er hier
+    /// wieder angehalten und das Profil neu angewendet (er streamt beim Start sein eigenes Profil).
     /// </summary>
     public async Task WatchAsusLightingServiceAsync(CancellationToken token)
     {
@@ -391,7 +404,8 @@ sealed class BorealisRuntime : IDisposable
             await gate.WaitAsync(token);
             try
             {
-                // Kurz warten, bis der Dienst seinen Start abgeschlossen hat, sonst überschreibt er danach
+                // Wait briefly until the service finished starting, or it overwrites us afterwards
+                // Kurz warten, bis der Dienst fertig gestartet ist, sonst überschreibt er danach
                 await Task.Delay(TimeSpan.FromSeconds(2), token);
                 if (lighting)
                 {
@@ -417,9 +431,10 @@ sealed class BorealisRuntime : IDisposable
         ServiceControl.GetState(service) is ServiceState.Running or ServiceState.StartPending;
 
     /// <summary>
-    /// Neue Lüftereinstellungen übernehmen. Beim ersten Einschalten werden die Kurven, die gerade im Chip stehen (vom
-    /// ASUS-Dienst), als eigene Kurven übernommen, damit sich nichts sprunghaft ändert. Beim Ausschalten bekommt der
-    /// ASUS-Lüfterdienst die Lüfter zurück.
+    /// Take new fan settings. On first enable the curves in the chip (from ASUS) become own curves, so nothing jumps;
+    /// on disable the ASUS fan service gets the fans back.
+    /// Neue Lüftereinstellungen übernehmen. Beim ersten Einschalten werden die Kurven im Chip (von ASUS) übernommen, damit
+    /// nichts springt; beim Ausschalten bekommt der ASUS-Lüfterdienst die Lüfter zurück.
     /// </summary>
     List<string> SetFansLocked(FanSettings next)
     {
@@ -441,6 +456,7 @@ sealed class BorealisRuntime : IDisposable
             try
             {
                 SetAsusFanStartType(next.DisableAsusFanService ? ServiceStartType.Disabled : ServiceStartType.Automatic);
+                // Allowed again and Borealis isn't in control: ASUS takes over as before
                 // Wieder erlaubt und Borealis steuert nicht: ASUS übernimmt wie vorher
                 if (!next.DisableAsusFanService && !next.Enabled) ServiceControl.Start(ServiceControl.AsusFanService);
             }
@@ -456,10 +472,12 @@ sealed class BorealisRuntime : IDisposable
         return ApplyFansLocked("nach Änderung");
     }
 
-    /// <summary>ASUS-Lüfterdienst anhalten (er schreibt sonst beim Start seine Kurven) und die eigenen Kurven schreiben.</summary>
+    /// <summary>Stop the ASUS fan service (it writes its curves at start) and write the own curves.
+    /// ASUS-Lüfterdienst anhalten (er schreibt sonst beim Start seine Kurven) und die eigenen Kurven schreiben.</summary>
     List<string> ApplyFansLocked(string when, bool fromTuner = false)
     {
-        // Während des Auto-Tunings stellt der Tuner die Leistung; die Kurven folgen, wenn er fertig ist
+        // During auto-tuning the tuner sets the duty; curves follow when it's done
+        // Während des Auto-Tunings stellt der Tuner die Leistung; die Kurven folgen danach
         if (tuner.Running && !fromTuner) return ["Das Auto-Tuning läuft; die Kurven werden danach geschrieben."];
         try
         {
@@ -485,7 +503,8 @@ sealed class BorealisRuntime : IDisposable
         }
     }
 
-    /// <summary>Ende des Auto-Tunings (Tuner-Thread): Ergebnisse speichern und die normalen Kurven zurückschreiben.</summary>
+    /// <summary>End of auto-tuning (tuner thread): save results and write back the normal curves.
+    /// Ende des Auto-Tunings (Tuner-Thread): Ergebnisse speichern und die normalen Kurven zurückschreiben.</summary>
     void OnTuned(Dictionary<string, FanTuning> results)
     {
         gate.Wait();
@@ -493,6 +512,7 @@ sealed class BorealisRuntime : IDisposable
         {
             if (results.Count > 0)
             {
+                // New dictionary instead of mutating: the sensor thread reads it at the same time
                 // Neues Wörterbuch statt Ändern: der Sensor-Thread liest es gleichzeitig
                 var tuning = new Dictionary<string, FanTuning>(settings.Fans.Tuning);
                 foreach (var (id, t) in results) tuning[id] = t;
@@ -502,6 +522,7 @@ sealed class BorealisRuntime : IDisposable
             if (settings.Fans.Enabled) ApplyFansLocked("nach dem Auto-Tuning", fromTuner: true);
             else if (IsRunning(ServiceControl.AsusFanService))
             {
+                // Handed back during cancel: restart ASUS so it writes its curves again
                 // Während des Abbruchs zurückgegeben: ASUS neu starten, damit er seine Kurven wieder schreibt
                 ServiceControl.Stop(ServiceControl.AsusFanService);
                 ServiceControl.Start(ServiceControl.AsusFanService);

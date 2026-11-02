@@ -1,7 +1,7 @@
-﻿# Baut Borealis (Release) nach dist\Borealis: Tray-App Borealis.exe und Dienst Borealis.Service.exe im selben Ordner.
-# Braucht das .NET-10-SDK; auf dem Zielrechner muss die .NET-10-Desktop-Laufzeit installiert sein.
-# Die Kommandozeile (borealis.exe) gehört nicht dazu: Sie hieße unter Windows gleich wie Borealis.exe.
-# Mit -CertThumbprint werden alle eigenen .exe/.dll signiert (setup\sign.ps1).
+﻿# Builds Borealis (Release) into dist\Borealis: Borealis.exe and Borealis.Service.exe. Needs the .NET 10 SDK.
+# The CLI is left out (borealis.exe would clash with Borealis.exe). -CertThumbprint signs all own files.
+# Baut Borealis (Release) nach dist\Borealis: Borealis.exe und Borealis.Service.exe. Braucht das .NET-10-SDK.
+# Ohne Kommandozeile (borealis.exe kollidiert mit Borealis.exe). -CertThumbprint signiert alle eigenen Dateien.
 param(
     [string]$Output = (Join-Path $PSScriptRoot '..\dist\Borealis'),
     [string]$CertThumbprint,

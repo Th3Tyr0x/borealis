@@ -4,9 +4,8 @@ using Borealis.Core.Lighting;
 namespace Borealis.Service;
 
 /// <summary>
-/// Live-Signale für reaktive Effekte, wie im LightingService (§5): Audio-Analyse (<see cref="AudioAnalyzer"/>),
-/// CPU-Auslastung (<c>GetSystemTimes</c>) und RAM-Belegung (<c>GlobalMemoryStatusEx</c>).
-/// Wird nur abgefragt, solange ein reaktiver Effekt läuft.
+/// Live signals for reactive effects (§5): audio analysis (<see cref="AudioAnalyzer"/>), CPU load (<c>GetSystemTimes</c>), RAM usage (<c>GlobalMemoryStatusEx</c>); only polled while a reactive effect runs.
+/// Live-Signale für reaktive Effekte (§5): Audio-Analyse (<see cref="AudioAnalyzer"/>), CPU-Last (<c>GetSystemTimes</c>), RAM-Belegung (<c>GlobalMemoryStatusEx</c>); nur abgefragt, solange ein reaktiver Effekt läuft.
 /// </summary>
 sealed class SignalSources : IDisposable
 {
@@ -14,7 +13,8 @@ sealed class SignalSources : IDisposable
     readonly AudioAnalyzer audio = new();
     long lastIdle, lastKernel, lastUser, nextSystemSample;
 
-    /// <summary>Signale aktualisieren (vom Effekt-Thread je Bild) und zurückgeben.</summary>
+    /// <summary>Update the signals (from the effect thread per frame) and return them.
+    /// Signale aktualisieren (vom Effekt-Thread je Bild) und zurückgeben.</summary>
     public EffectInputs Update(bool needAudio, bool needSystem)
     {
         if (needAudio)

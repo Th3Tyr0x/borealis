@@ -6,7 +6,8 @@ using System.Windows.Media.Imaging;
 
 namespace Borealis.App;
 
-/// <summary>Rendert das Hauptfenster mit jeder Seite als PNG (zum Prüfen des Designs ohne Bildschirmfoto).</summary>
+/// <summary>Renders the main window with every page as PNG (design check without screen capture).
+/// Rendert das Hauptfenster mit jeder Seite als PNG (Designprüfung ohne Bildschirmfoto).</summary>
 static class Screenshots
 {
     public static async Task RenderAsync(string folder)
@@ -23,7 +24,8 @@ static class Screenshots
             await Task.Delay(400);
             Save(w, Path.Combine(folder, nav + ".png"));
         }
-        // Rechtsklick-Menü der ersten Zone (Popups sind im Fensterbild nicht enthalten)
+        // Context menu of the first zone (popups aren't in the window image)
+        // Kontextmenü der ersten Zone (Popups fehlen im Fensterbild)
         ((RadioButton)w.FindName("NavDevices")).IsChecked = true;
         await Task.Delay(400);
         if (FindAll<System.Windows.Controls.Primitives.ToggleButton>(w).FirstOrDefault(t => t.ContextMenu != null)?.ContextMenu is { } menu)

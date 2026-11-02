@@ -5,9 +5,10 @@ using Borealis.Core.Lighting;
 namespace Borealis.Service;
 
 /// <summary>
-/// Streamt Software-Effekte (eigener Thread). Die Bildrate kommt aus dem Leistungsmodus; jedes Bild geht als
-/// ein Block an den Controller (§1.9: alle Kanäle zusammen, danach Pause), der RAM über die ENE-HAL.
-/// Hardwarezugriffe teilen sich die Sperre <see cref="hw"/> mit dem übrigen Dienst.
+/// Streams software effects (own thread). Frame rate from performance mode; each frame goes to the controller as one block
+/// (§1.9: all channels, then pause), RAM separately. Shares the lock <see cref="hw"/> with the rest of the service.
+/// Streamt Software-Effekte (eigener Thread). Bildrate aus dem Leistungsmodus; jedes Bild geht als ein Block an den
+/// Controller (§1.9: alle Kanäle, dann Pause), der RAM getrennt. Teilt die Sperre <see cref="hw"/> mit dem übrigen Dienst.
 /// </summary>
 sealed class EffectRunner : IDisposable
 {
@@ -26,7 +27,8 @@ sealed class EffectRunner : IDisposable
     int fps = 20;
     bool clearPending;
 
-    // RAM läuft in eigenem Thread (SMBus ist langsamer als USB): er bekommt immer das neueste Bild, ältere verfallen
+    // RAM runs in its own thread (SMBus is slower than USB): it always gets the newest frame, older ones are dropped
+    // RAM läuft im eigenen Thread (SMBus ist langsamer als USB): er bekommt immer das neueste Bild, ältere verfallen
     readonly Thread ramThread;
     readonly AutoResetEvent ramWake = new(false);
     sealed record RamJob(LightingEngine Engine, List<(SoftwareZone, Rgb[])> Frame);
@@ -57,10 +59,12 @@ sealed class EffectRunner : IDisposable
         }
     }
 
-    /// <summary>Gemessene Bildrate (Bilder/s) der letzten Sekunde, 0 = kein Software-Effekt aktiv.</summary>
+    /// <summary>Measured frame rate (fps) of the last second, 0 = no software effect.
+    /// Gemessene Bildrate (Bilder/s) der letzten Sekunde, 0 = kein Software-Effekt.</summary>
     public double MeasuredFps { get; private set; }
 
-    /// <summary>Neue Zonen/Einstellungen übernehmen; leere Liste hält an. Die Animation läuft ohne Sprung weiter.</summary>
+    /// <summary>Take new zones/settings; an empty list stops. The animation continues without a jump.
+    /// Neue Zonen/Einstellungen übernehmen; leere Liste hält an. Die Animation läuft ohne Sprung weiter.</summary>
     public void Update(LightingEngine? target, IReadOnlyList<SoftwareZone> softwareZones, double brightness01, int framesPerSecond)
     {
         lock (state)
@@ -75,7 +79,8 @@ sealed class EffectRunner : IDisposable
         wake.Set();
     }
 
-    /// <summary>Anhalten, bevor das Gerät geschlossen wird.</summary>
+    /// <summary>Stop before the device is closed.
+    /// Anhalten, bevor das Gerät geschlossen wird.</summary>
     public void Pause() => Update(null, [], brightness, fps);
 
     void Run()
@@ -103,7 +108,7 @@ sealed class EffectRunner : IDisposable
 
             long start = clock.ElapsedMilliseconds;
             double t = start / 1000.0;
-            // Reaktive Effekte: Pegel/CPU nur abfragen, wenn sie gebraucht werden
+            // Reactive effects: query level/CPU only when needed / Reaktive Effekte: Pegel/CPU nur bei Bedarf abfragen
             var inputs = signals.Update(zs.Any(z => z.Setting.Effect == FirmwareEffect.Music), zs.Any(z => z.Setting.Effect == FirmwareEffect.Smart));
             var frame = new List<(SoftwareZone, Rgb[])>(zs.Count);
             foreach (var z in zs)
@@ -112,7 +117,8 @@ sealed class EffectRunner : IDisposable
                 try { SoftwareEffects.Render(z.Setting, z.Zone.Id, t, b, leds, inputs); }
                 catch (Exception ex)
                 {
-                    // Ein Rechenfehler darf den Dienst nicht beenden; Zone bleibt für dieses Bild dunkel
+                    // A computing error must not end the service; the zone stays dark for this frame
+                    // Ein Rechenfehler darf den Dienst nicht beenden; die Zone bleibt für dieses Bild dunkel
                     if (!renderErrorLogged) Log.Error($"Effekt {z.Setting.Effect} auf {z.Zone.Id} fehlgeschlagen", ex);
                     renderErrorLogged = true;
                 }
@@ -147,6 +153,7 @@ sealed class EffectRunner : IDisposable
                 frames = 0;
                 secondStart = now;
             }
+            // At least 5 ms pause so the controller rests between blocks (§1.9)
             // Mindestens 5 ms Pause, damit der Controller zwischen zwei Blöcken Ruhe hat (§1.9)
             int wait = Math.Max(5, (int)(1000 / rate - (now - start)));
             wake.WaitOne(wait);

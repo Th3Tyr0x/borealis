@@ -1,8 +1,7 @@
-﻿# Entfernt Borealis (Administrator): Dienst, Autostart der App und "C:\Program Files\Borealis".
-# Einstellungen und Profile in C:\ProgramData\Borealis bleiben, außer mit -RemoveSettings.
-# Die Lüfterkurven im Chip bleiben bis zum nächsten Neustart, danach regelt das BIOS. Soll wieder der
-# ASUS-Lüfterdienst regeln, vorher in Borealis die Lüftersteuerung ausschalten (Borealis gibt die Lüfter dann zurück
-# und erlaubt den Dienst wieder).
+﻿# Removes Borealis (admin): service, app autostart, program folder. Settings stay unless -RemoveSettings.
+# Fan curves stay in the chip until reboot. To hand fans back to ASUS, turn off fan control in Borealis first.
+# Entfernt Borealis (Admin): Dienst, Autostart, Programmordner. Einstellungen bleiben, außer mit -RemoveSettings.
+# Lüfterkurven bleiben bis zum Neustart im Chip. Zurück an ASUS: vorher die Lüftersteuerung in Borealis ausschalten.
 param(
     [string]$Target = (Join-Path $env:ProgramFiles 'Borealis'),
     [switch]$RemoveSettings,

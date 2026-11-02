@@ -9,15 +9,17 @@ using Borealis.Core.Hardware;
 namespace Borealis.App;
 
 /// <summary>
-/// Richtet den Treiber PawnIO ein, den Borealis für Lüfter, Temperaturen und RAM-Beleuchtung braucht.
-/// Der Installer kommt aus dem Borealis-Ordner (falls mitgeliefert) oder von GitHub; ausgeführt wird er nur, wenn
-/// seine SHA-256 mit der festen Prüfsumme übereinstimmt. Er läuft still mit Adminrechten (UAC-Abfrage).
+/// Sets up the PawnIO driver (fans, temperatures, RAM lighting). The installer comes from the Borealis folder or GitHub
+/// and only runs silently with admin rights (UAC) if its SHA-256 matches the fixed hash.
+/// Richtet den Treiber PawnIO ein (Lüfter, Temperaturen, RAM-Licht). Der Installer kommt aus dem Borealis-Ordner oder
+/// von GitHub und läuft nur still mit Adminrechten (UAC), wenn seine SHA-256 zur festen Prüfsumme passt.
 /// </summary>
 static class PawnIoSetup
 {
     public static bool IsInstalled => PawnIo.InstalledVersion() != null;
 
-    /// <summary>Beim ersten Start einmal fragen, wenn PawnIO fehlt; später geht es über die Einstellungen.</summary>
+    /// <summary>Ask once on first start if PawnIO is missing; later via settings.
+    /// Beim ersten Start einmal fragen, wenn PawnIO fehlt; später über die Einstellungen.</summary>
     public static async Task AskOnFirstStartAsync(Window owner)
     {
         if (IsInstalled || UiPrefs.Current.PawnIoAsked) return;
@@ -33,7 +35,8 @@ static class PawnIoSetup
         MessageBox.Show(owner, message, "Borealis", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    /// <summary>Installer holen, prüfen und still installieren; danach den Dienst neu verbinden lassen.</summary>
+    /// <summary>Get, verify and silently install the installer, then let the service reconnect.
+    /// Installer holen, prüfen und still installieren; danach den Dienst neu verbinden lassen.</summary>
     public static async Task<(bool Ok, string Message)> InstallAsync()
     {
         string setup;
@@ -47,7 +50,8 @@ static class PawnIoSetup
         int exitCode;
         try
         {
-            // Die geprüfte Datei bleibt bis zum Ende gegen Schreiben gesperrt
+            // The verified file stays write-locked until the end
+            // Die geprüfte Datei bleibt bis zum Ende schreibgeschützt
             using var process = Process.Start(new ProcessStartInfo(setup, PawnIo.SetupArguments) { UseShellExecute = true, Verb = "runas" })
                                 ?? throw new IOException("Installer nicht gestartet.");
             await process.WaitForExitAsync();
@@ -76,8 +80,8 @@ static class PawnIoSetup
     }
 
     /// <summary>
-    /// Mitgelieferten Installer nehmen oder von GitHub laden. Gibt ihn geprüft und zum Schreiben gesperrt zurück;
-    /// wirft, wenn die Prüfsumme nicht stimmt.
+    /// Use the bundled installer or download it; returns it verified and write-locked, throws on a hash mismatch.
+    /// Mitgelieferten Installer nehmen oder laden; gibt ihn geprüft und schreibgeschützt zurück, wirft bei falscher Prüfsumme.
     /// </summary>
     static async Task<(string Path, FileStream Locked)> GetInstallerAsync()
     {
@@ -105,6 +109,7 @@ static class PawnIoSetup
         throw new IOException(Loc.T("Prüfsumme des Installers stimmt nicht.", "The installer checksum does not match."));
     }
 
+    // Read allowed (to run it), write and delete not
     // Lesen erlaubt (zum Starten), Schreiben und Löschen nicht
     static FileStream OpenLocked(string path) => new(path, FileMode.Open, FileAccess.Read, FileShare.Read);
 

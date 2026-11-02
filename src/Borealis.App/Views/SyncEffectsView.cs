@@ -5,8 +5,8 @@ using Borealis.Core.Lighting;
 namespace Borealis.App.Views;
 
 /// <summary>
-/// Reiter „Borealis-Effekte“: ein Effekt mit Farbe, Geschwindigkeit, Richtung und Helligkeit für alle Geräte.
-/// Jede Auswahl hier nimmt alle Geräte wieder in Borealis Sync auf, damit der Effekt überall gleich und synchron läuft.
+/// "Borealis effects" tab: one effect for all devices; any choice here puts all devices back into Sync.
+/// Reiter „Borealis-Effekte“: ein Effekt für alle Geräte; jede Auswahl nimmt alle Geräte wieder in Sync auf.
 /// </summary>
 sealed class SyncEffectsView : UserControl
 {
@@ -34,7 +34,8 @@ sealed class SyncEffectsView : UserControl
                         $"{(single.Count == 1 ? "is" : "are")} currently set individually and will be synced again with the next selection here.");
             info.Foreground = single.Count == 0 ? Ui.Brush("TextDim") : Ui.Brush("Warn");
         }
-        // Jede Änderung hier gilt für alle Geräte (wie vom Nutzer gewünscht); einzeln geht es unter „Geräte“
+        // Every change here applies to all devices; per device under "Devices"
+        // Jede Änderung hier gilt für alle Geräte; einzeln unter „Geräte“
         void Changed()
         {
             if (hasMb) sync.Mainboard = true;
@@ -58,7 +59,7 @@ sealed class SyncEffectsView : UserControl
         var left = new StackPanel();
         UpdateInfo();
         left.Children.Add(info);
-        // Ein/Aus wie „RGB-Beleuchtung ein-/ausschalten“ in Armoury Crate; „Aus“ ist kein Effekt mehr
+        // Lighting on/off; "Off" is no longer an effect / Beleuchtung ein/aus; „Aus“ ist kein Effekt mehr
         var power = new CheckBox { Style = Ui.Style("Switch"), Content = Loc.T("Beleuchtung an", "Lighting on"), IsChecked = on, Margin = new Thickness(0, 0, 0, 20) };
         power.Click += (_, _) =>
         {

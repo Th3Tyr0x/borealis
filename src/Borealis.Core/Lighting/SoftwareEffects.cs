@@ -2,55 +2,72 @@ using Borealis.Core.Profiles;
 
 namespace Borealis.Core.Lighting;
 
-/// <summary>Was ein Effekt in Borealis einstellen lässt (steuert, welche Regler die Oberfläche zeigt).</summary>
+/// <summary>What an effect lets you set (controls which sliders the UI shows).
+/// Was ein Effekt einstellen lässt (steuert, welche Regler die Oberfläche zeigt).</summary>
 public sealed record EffectCaps(bool Color, bool Speed, bool Direction, bool Size, bool Density, bool Background,
     string SizeLabel = "Größe", bool TwoColors = false, string Color1Label = "Farbe 1", string Color2Label = "Farbe 2",
     string[]? Modes = null);
 
-/// <summary>Live-Signale für reaktive Effekte, vom Dienst je Bild gesetzt.</summary>
+/// <summary>Live signals for reactive effects, set by the service per frame.
+/// Live-Signale für reaktive Effekte, vom Dienst je Bild gesetzt.</summary>
 public sealed class EffectInputs
 {
-    /// <summary>Gesamtpegel des Wiedergabegeräts 0–1 (automatisch verstärkt, geglättet).</summary>
+    /// <summary>Overall playback level 0–1 (auto gain, smoothed).
+    /// Gesamtpegel der Wiedergabe 0–1 (automatisch verstärkt, geglättet).</summary>
     public double AudioLevel { get; set; }
-    /// <summary>Bass, Mitten, Höhen 0–1.</summary>
+    /// <summary>Bass, mids, highs 0–1.
+    /// Bass, Mitten, Höhen 0–1.</summary>
     public double Bass { get; set; }
     public double Mid { get; set; }
     public double Treble { get; set; }
-    /// <summary>16 Frequenzbänder von 40 Hz bis 16 kHz, je 0–1.</summary>
+    /// <summary>16 bands from 40 Hz to 16 kHz, each 0–1.
+    /// 16 Frequenzbänder von 40 Hz bis 16 kHz, je 0–1.</summary>
     public double[] Bands { get; set; } = new double[16];
-    /// <summary>Beat-Impuls: 1 im Moment des Beats, klingt danach ab.</summary>
+    /// <summary>Beat pulse: 1 at the beat, then decays.
+    /// Beat-Impuls: 1 im Moment des Beats, klingt danach ab.</summary>
     public double Beat { get; set; }
-    /// <summary>Anzahl erkannter Beats (für Farbwechsel je Beat).</summary>
+    /// <summary>Number of detected beats (for color change per beat).
+    /// Anzahl erkannter Beats (für Farbwechsel je Beat).</summary>
     public long BeatCount { get; set; }
-    /// <summary>Sekunden seit den letzten Beats, neuester zuerst (höchstens 6).</summary>
+    /// <summary>Seconds since the last beats, newest first (at most 6).
+    /// Sekunden seit den letzten Beats, neuester zuerst (höchstens 6).</summary>
     public double[] BeatAges { get; set; } = [];
-    /// <summary>Geschätztes Tempo in Schlägen je Minute (0 = unbekannt).</summary>
+    /// <summary>Estimated tempo in BPM (0 = unknown).
+    /// Geschätztes Tempo in Schlägen je Minute (0 = unbekannt).</summary>
     public double Bpm { get; set; }
-    /// <summary>Position im aktuellen Takt 0–1 (aus Tempo und letztem Beat).</summary>
+    /// <summary>Position in the current bar 0–1 (from tempo and last beat).
+    /// Position im aktuellen Takt 0–1 (aus Tempo und letztem Beat).</summary>
     public double BeatPhase { get; set; }
-    /// <summary>„Drop“: plötzlicher starker Anstieg der Energie, 1 im Moment des Drops, klingt ab.</summary>
+    /// <summary>"Drop": sudden strong energy rise, 1 at the drop, then decays.
+    /// „Drop“: plötzlicher starker Energieanstieg, 1 im Moment des Drops, klingt ab.</summary>
     public double Drop { get; set; }
-    /// <summary>Langsam fallende Spitzenwerte (Pegel und je Band) für Spitzenpunkte.</summary>
+    /// <summary>Slowly falling peaks (level and per band) for peak dots.
+    /// Langsam fallende Spitzenwerte (Pegel und je Band) für Spitzenpunkte.</summary>
     public double LevelPeak { get; set; }
     public double[] BandPeaks { get; set; } = new double[16];
-    /// <summary>Klangfarbe/Tonhöhe: Schwerpunkt des Spektrums 0 (tief) – 1 (hoch).</summary>
+    /// <summary>Timbre/pitch: spectral centroid 0 (low) – 1 (high).
+    /// Klangfarbe/Tonhöhe: Schwerpunkt des Spektrums 0 (tief) – 1 (hoch).</summary>
     public double Centroid { get; set; }
-    /// <summary>CPU-Auslastung 0–1 (geglättet).</summary>
+    /// <summary>CPU load 0–1 (smoothed).
+    /// CPU-Auslastung 0–1 (geglättet).</summary>
     public double CpuLoad { get; set; }
-    /// <summary>RAM-Belegung 0–1 (geglättet).</summary>
+    /// <summary>RAM usage 0–1 (smoothed).
+    /// RAM-Belegung 0–1 (geglättet).</summary>
     public double RamLoad { get; set; }
 
     public static readonly EffectInputs None = new();
 }
 
 /// <summary>
-/// Effekte, die Borealis selbst berechnet und als Direct-Farben streamt, wie die Software-Effekte des
-/// LightingService („SW-Sync“, §5). Zustandslos: Jedes Bild hängt nur von der Zeit (und den Live-Signalen) ab,
-/// deshalb laufen alle Geräte synchron. Zufall kommt aus einer Hash-Funktion über Zone, LED und Zeitabschnitt.
+/// Effects computed by Borealis and streamed as direct colors (§5). Stateless: each frame depends only on time (and live
+/// signals), so all devices stay in sync. Randomness comes from a hash over zone, LED and time slot.
+/// Effekte, die Borealis berechnet und als Direct-Farben streamt (§5). Zustandslos: Jedes Bild hängt nur von der Zeit (und
+/// den Live-Signalen) ab, daher laufen alle Geräte synchron. Zufall kommt aus einem Hash über Zone, LED und Zeitabschnitt.
 /// </summary>
 public static class SoftwareEffects
 {
-    /// <summary>Unterarten von „Musik“ (Wert von <c>Mode</c>).</summary>
+    /// <summary>"Music" variants (value of <c>Mode</c>).
+    /// Unterarten von „Musik“ (Wert von <c>Mode</c>).</summary>
     public static readonly string[] MusicModes =
     [
         "Pegel", "Spektrum", "Spektrum gespiegelt", "Puls", "Bass",
@@ -87,7 +104,8 @@ public static class SoftwareEffects
 
     public static EffectCaps CapsOf(FirmwareEffect e) => Caps.TryGetValue(e, out var c) ? c : Caps[FirmwareEffect.Static];
 
-    /// <summary>Effektgruppen für die Oberfläche (Reihenfolge wie Kacheln).</summary>
+    /// <summary>Effect groups for the UI (tile order).
+    /// Effektgruppen für die Oberfläche (Reihenfolge der Kacheln).</summary>
     public static readonly (string Title, FirmwareEffect[] Effects)[] Sections =
     [
         ("Grundeffekte", [FirmwareEffect.Static, FirmwareEffect.Breathing, FirmwareEffect.Strobing, FirmwareEffect.ColorCycle,
@@ -102,10 +120,12 @@ public static class SoftwareEffects
     public static bool HasSpeed(FirmwareEffect e) => CapsOf(e).Speed;
     public static bool HasDirection(FirmwareEffect e) => CapsOf(e).Direction;
 
-    /// <summary>Effekte ohne Firmware-Gegenstück (laufen immer in Software).</summary>
+    /// <summary>Effects without a firmware counterpart (always software).
+    /// Effekte ohne Firmware-Gegenstück (immer in Software).</summary>
     public static bool IsSoftwareOnly(FirmwareEffect e) => (byte)e is >= 0x80 and < 0xFF;
 
-    /// <summary>Hardware-Effekt, der beim Hochfahren gezeigt wird, bis Borealis übernimmt.</summary>
+    /// <summary>Hardware effect shown at boot until Borealis takes over.
+    /// Hardware-Effekt beim Hochfahren, bis Borealis übernimmt.</summary>
     public static FirmwareEffect FirmwareFallback(FirmwareEffect e) => e switch
     {
         FirmwareEffect.BreathRainbow or FirmwareEffect.Plasma => FirmwareEffect.Rainbow,
@@ -118,32 +138,36 @@ public static class SoftwareEffects
         _ => e,
     };
 
-    /// <summary>Durchläufe je Sekunde für Stufe 1–10 (1 ≈ alle 12 s, 5 ≈ alle 3 s, 10 ≈ 2 je Sekunde).</summary>
+    /// <summary>Cycles per second for level 1–10 (1 ≈ every 12 s, 5 ≈ every 3 s, 10 ≈ 2 per second).
+    /// Durchläufe je Sekunde für Stufe 1–10 (1 ≈ alle 12 s, 5 ≈ alle 3 s, 10 ≈ 2 je Sekunde).</summary>
     public static double Rate(int speed) => 0.08 * Math.Pow(1.42, Math.Clamp(speed, 1, 10) - 1);
 
-    /// <summary>Ein Bild für eine Zone berechnen.</summary>
-    /// <param name="zoneId">Zonen-ID (Farbe je Zone, Startwert für Zufall).</param>
-    /// <param name="t">Zeit in Sekunden seit Dienststart.</param>
-    /// <param name="brightness">Helligkeit 0–1.</param>
+    /// <summary>Compute one frame for a zone.
+    /// Ein Bild für eine Zone berechnen.</summary>
+    /// <param name="zoneId">Zone ID (color per zone, random seed). / Zonen-ID (Farbe je Zone, Startwert für Zufall).</param>
+    /// <param name="t">Seconds since service start. / Sekunden seit Dienststart.</param>
+    /// <param name="brightness">Brightness 0–1. / Helligkeit 0–1.</param>
     public static void Render(GroupSetting s, string zoneId, double t, double brightness, Span<Rgb> leds, EffectInputs? inputs = null)
     {
         int n = leds.Length;
         if (n == 0) return;
         inputs ??= EffectInputs.None;
         int seed = StableHash(zoneId);
-        // In Borealis Sync wechseln Zufallsfarben auf allen Geräten gleichzeitig; Sterne usw. bleiben je LED zufällig
+        // In Sync, random colors change on all devices at once; stars etc. stay random per LED
+        // In Sync wechseln Zufallsfarben auf allen Geräten gleichzeitig; Sterne usw. bleiben je LED zufällig
         int zoneSeed = s.Synced ? 0x5A17C0DE : seed;
         double f = Rate(s.EffectiveSpeed);
         int dir = s.Direction == EffectDirection.Left ? -1 : 1;
         double size = Math.Clamp(s.Size, 1, 10);
         double density = Math.Clamp(s.Density, 1, 10);
-        double sizeFrac = 0.04 + 0.06 * size;              // Anteil der Zonenlänge: 0,1 … 0,64
+        double sizeFrac = 0.04 + 0.06 * size; // Share of zone length: 0.1 … 0.64 / Anteil der Zonenlänge
         var c1 = s.ColorOf(zoneId);
         var c2 = s.SecondColor;
         double interval = Math.Clamp(s.ChangeInterval, 1, 60);
         double fade = Math.Clamp(s.Transition, 0, 10) / 10.0;
 
-        // Zufallsfarbe auf „Spur“ lane: hält die Farbe und gleitet im letzten Teil des Intervalls über den Farbkreis zur nächsten
+        // Random color per lane: holds, then glides around the hue circle to the next one at the end of the interval
+        // Zufallsfarbe je Spur: hält und gleitet am Ende des Intervalls über den Farbkreis zur nächsten
         Rgb RandomColor(int sd, int lane)
         {
             double offset = lane == 0 ? 0 : Hash01(sd, lane, -11) * interval;
@@ -156,15 +180,16 @@ public static class SoftwareEffects
             if (dh > 0.5) dh -= 1; else if (dh < -0.5) dh += 1;
             return Rgb.FromHue(h0 + dh * x);
         }
-        // Farbe nach Farbmodus; perLed = eigene Zufallsspur je LED (Sterne, Funkeln …), sonst eine für die ganze Zone
+        // Color by color mode; perLed = own random lane per LED (stars, sparkle …), else one per zone
+        // Farbe nach Farbmodus; perLed = eigene Zufallsspur je LED (Sterne, Funkeln …), sonst eine je Zone
         Rgb ColorFor(int lane, double gradientPos, bool perLed = false) => s.ColorMode switch
         {
             ColorMode.Random => perLed ? RandomColor(seed, lane + 1) : RandomColor(zoneSeed, 0),
             ColorMode.Gradient => Lerp(c1, c2, gradientPos),
             _ => c1,
         };
-        // Intensität v zwischen Hintergrund und Farbe, dann Helligkeit
-        // Hintergrund je LED: aus = schwarz, Farbe, oder langsam wandernder, gedimmter Regenbogen
+        // Intensity v between background and color, then brightness; background: off = black, color, or slow dimmed rainbow
+        // Intensität v zwischen Hintergrund und Farbe, dann Helligkeit; Hintergrund: aus = schwarz, Farbe oder gedimmter Regenbogen
         var bgRow = BackgroundRow(s, n, t);
         Rgb ShadeAt(int i, Rgb c, double v) => Scale(Lerp(bgRow[i], c, v), brightness);
         double Pos(int i) => n > 1 ? (double)i / (n - 1) : 0;
@@ -204,7 +229,7 @@ public static class SoftwareEffects
 
             case FirmwareEffect.Rainbow:
             {
-                double spread = 0.2 + size * 0.16;          // Farbkreise je Zone
+                double spread = 0.2 + size * 0.16; // Hue circles per zone / Farbkreise je Zone
                 for (int i = 0; i < n; i++)
                     leds[i] = Scale(Rgb.FromHue(dir * t * f * 0.5 - (n > 1 ? (double)i / n * spread : 0)), brightness);
                 return;
@@ -251,7 +276,7 @@ public static class SoftwareEffects
 
             case FirmwareEffect.MovingFlash:
             {
-                int count = 1 + (int)(density / 3);         // 1–4 Blitze gleichzeitig
+                int count = 1 + (int)(density / 3); // 1–4 flashes at once / Blitze gleichzeitig
                 double w = Math.Max(1, n * sizeFrac * 0.4);
                 for (int i = 0; i < n; i++)
                 {
@@ -322,7 +347,7 @@ public static class SoftwareEffects
                         double head = Frac(t * rate + Hash01(seed, j, -22)) * (n + tail);
                         double d = head - Index(i);
                         if (d < 0 || d > tail) continue;
-                        // Zerfallender Schweif mit Funkeln
+                        // Fading tail with sparkle / Zerfallender Schweif mit Funkeln
                         double v = Math.Pow(1 - d / tail, 1.5) * (d < 1 ? 1 : 0.55 + 0.45 * Hash01(seed, i, (long)(t * 12)));
                         if (v > best) { best = v; hit = j; }
                     }
@@ -350,7 +375,7 @@ public static class SoftwareEffects
 
             case FirmwareEffect.Fireworks:
             {
-                int lanes = 1 + (int)(density / 2);         // 1–6 gleichzeitige Raketen
+                int lanes = 1 + (int)(density / 2); // 1–6 rockets at once / Raketen gleichzeitig
                 for (int i = 0; i < n; i++)
                 {
                     double best = 0; Rgb color = c1;
@@ -384,7 +409,7 @@ public static class SoftwareEffects
 
             case FirmwareEffect.Smart:
             {
-                // Modus: 0 CPU-Farbe, 1 CPU-Balken, 2 RAM-Farbe, 3 RAM-Balken
+                // Mode: 0 CPU color, 1 CPU bar, 2 RAM color, 3 RAM bar / Modus: 0 CPU-Farbe, 1 CPU-Balken, 2 RAM-Farbe, 3 RAM-Balken
                 int mode = Math.Clamp(s.Mode, 0, 3);
                 double value = mode < 2 ? inputs.CpuLoad : inputs.RamLoad;
                 if (mode % 2 == 0 || n == 1)
@@ -404,7 +429,7 @@ public static class SoftwareEffects
 
             case FirmwareEffect.Fire:
             {
-                double height = 0.3 + size * 0.07;          // Anteil der Zone, die brennt
+                double height = 0.3 + size * 0.07; // Burning share of the zone / Anteil der Zone, der brennt
                 for (int i = 0; i < n; i++)
                 {
                     double p = Pos(i);
@@ -441,7 +466,8 @@ public static class SoftwareEffects
         }
     }
 
-    /// <summary>Rechnet alle Effekte mit allen Farbmodi und Zonenlängen durch, ohne Hardware (Entwicklertest).</summary>
+    /// <summary>Runs all effects with all color modes and zone lengths, no hardware (dev test).
+    /// Rechnet alle Effekte mit allen Farbmodi und Zonenlängen durch, ohne Hardware (Entwicklertest).</summary>
     public static string SelfTest()
     {
         int frames = 0, lit = 0;
@@ -469,7 +495,7 @@ public static class SoftwareEffects
                 lit += leds.Count(c => c.R + c.G + c.B > 0);
             }
         }
-        // Farbabgleich: Verstärkung je Kanal, Begrenzung auf 255, Kanalreihenfolge
+        // Calibration: gain per channel, clamp to 255, channel order / Farbabgleich: Verstärkung je Kanal, Begrenzung, Reihenfolge
         void Expect(Profiles.ZoneCalibration c, Rgb input, Rgb want)
         {
             var got = c.Apply(input);
@@ -486,8 +512,10 @@ public static class SoftwareEffects
 
 
     /// <summary>
-    /// „Musik“: zehn Darstellungen der Audio-Analyse. Farbe je Beat bei „Zufall“ (gleitet in 0,3 s zur neuen Farbe),
-    /// Verlauf über die Position, sonst Farbe 1. Empfindlichkeit = Größe, Tempo/Richtung für Welle und Lauflicht.
+    /// "Music": ten views of the audio analysis. Random = new color per beat (glides in 0.3 s), gradient by position, else color 1.
+    /// Sensitivity = size; speed/direction for wave and chase.
+    /// „Musik“: zehn Darstellungen der Audio-Analyse. Zufall = neue Farbe je Beat (gleitet in 0,3 s), Verlauf über die Position,
+    /// sonst Farbe 1. Empfindlichkeit = Größe; Tempo/Richtung für Welle und Lauflicht.
     /// </summary>
     static void RenderMusic(GroupSetting s, Span<Rgb> leds, EffectInputs a, double t, double brightness,
         int zoneSeed, int seed, Rgb c1, Rgb c2, Rgb[] bgRow, int dir, double size, double density, double f)
@@ -520,13 +548,13 @@ public static class SoftwareEffects
             if (b.Length == 0) return 0;
             return b[(int)Math.Round(Math.Clamp(x, 0, 1) * (b.Length - 1))];
         }
-        // Weißer Blitz bei einem Drop über allem
+        // White flash over everything on a drop / Weißer Blitz über allem bei einem Drop
         Rgb WithDrop(Rgb c) => a.Drop > 0.05 ? Lerp(c, Rgb.White, a.Drop * 0.8) : c;
 
         switch (Math.Clamp(s.Mode, 0, MusicModes.Length - 1))
         {
-            case 1: // Spektrum: Bass am Anfang, Höhen am Ende, Nachleuchten der Spitzen
-            case 2: // Spektrum gespiegelt: Bass in der Mitte
+            case 1: // Spectrum: bass first, highs last, peak afterglow / Spektrum: Bass vorn, Höhen hinten, Nachleuchten
+            case 2: // Mirrored spectrum: bass in the middle / Spektrum gespiegelt: Bass in der Mitte
             {
                 bool mirrored = s.Mode == 2;
                 double half = (n - 1) / 2.0;
@@ -544,23 +572,23 @@ public static class SoftwareEffects
                 }
                 return;
             }
-            case 3: // Puls: blitzt auf jeden Beat, dazwischen leises Glimmen
+            case 3: // Pulse: flash on every beat, faint glow between / Puls: Blitz auf jeden Beat, dazwischen Glimmen
             {
                 double v = Math.Max(Math.Pow(a.Beat, 1.2), Amp(a.AudioLevel) * 0.25);
                 var c = WithDrop(s.ColorMode == ColorMode.Gradient ? Lerp(c2, c1, a.Beat) : ColorAt(0, a.BeatCount));
                 for (int i = 0; i < n; i++) leds[i] = ShadeAt(i, c, v);
                 return;
             }
-            case 4: // Bass: Helligkeit folgt dem Bass, Beats geben einen Schub
+            case 4: // Bass: brightness follows the bass, beats add a kick / Bass: Helligkeit folgt dem Bass, Beats geben Schub
             {
                 double v = Math.Max(Amp(a.Bass) * Amp(a.Bass), a.Beat * 0.9);
                 var c = s.ColorMode == ColorMode.Gradient ? Lerp(c1, c2, v) : ColorAt(0, a.BeatCount);
                 for (int i = 0; i < n; i++) leds[i] = ShadeAt(i, c, v);
                 return;
             }
-            case 5: // Welle im Takt: jeder Beat schickt eine Welle über das Gerät
+            case 5: // Beat wave: each beat sends a wave across the device / Welle im Takt: jeder Beat schickt eine Welle
             {
-                double travel = 1.7 - s.EffectiveSpeed * 0.13;          // Sekunden für die ganze Länge
+                double travel = 1.7 - s.EffectiveSpeed * 0.13; // Seconds for the full length / Sekunden für die ganze Länge
                 double w = Math.Max(1.5, n * 0.12);
                 for (int i = 0; i < n; i++)
                 {
@@ -578,7 +606,7 @@ public static class SoftwareEffects
                 }
                 return;
             }
-            case 6: // Lauflicht im Takt: Segmente springen mit dem Tempo weiter
+            case 6: // Beat chase: segments step with the tempo / Lauflicht im Takt: Segmente springen mit dem Tempo
             {
                 double spacing = Math.Max(3, n / (2 + density / 2));
                 double w = Math.Max(1, spacing * 0.4);
@@ -600,7 +628,7 @@ public static class SoftwareEffects
                 }
                 return;
             }
-            case 7: // Funken im Takt: jeder Beat zündet Funken an zufälligen Stellen
+            case 7: // Beat sparks: each beat lights sparks at random spots / Funken im Takt an zufälligen Stellen
             {
                 int bursts = 1 + (int)(density / 4);
                 for (int i = 0; i < n; i++)
@@ -625,7 +653,7 @@ public static class SoftwareEffects
                 }
                 return;
             }
-            case 8: // Tonhöhe: Farbe folgt dem Klangschwerpunkt (tief = rot, hoch = violett)
+            case 8: // Pitch: color follows the spectral centroid (low = red, high = violet) / Tonhöhe: tief = rot, hoch = violett
             {
                 var baseColor = s.ColorMode switch
                 {
@@ -641,7 +669,7 @@ public static class SoftwareEffects
                 }
                 return;
             }
-            case 9: // Drop-Strobo: Bass-Glühen, bei einem Drop Stroboskop
+            case 9: // Drop strobe: bass glow, strobe on a drop / Drop-Strobo: Bass-Glühen, Stroboskop beim Drop
             {
                 bool strobe = a.Drop > 0.15 && Frac(t * 14) < 0.5;
                 double v = strobe ? 1 : Math.Max(Amp(a.Bass) * Amp(a.Bass) * 0.7, a.Beat * 0.5);
@@ -649,7 +677,7 @@ public static class SoftwareEffects
                 for (int i = 0; i < n; i++) leds[i] = ShadeAt(i, c, v);
                 return;
             }
-            default: // Pegel: wächst von der Mitte nach außen, mit fallendem Spitzenpunkt
+            default: // Level: grows from the center out, with a falling peak / Pegel: wächst von der Mitte nach außen, mit fallender Spitze
             {
                 double level = Amp(a.AudioLevel), peak = Amp(a.LevelPeak);
                 if (n == 1) { leds[0] = ShadeAt(0, ColorAt(level, a.BeatCount), level); return; }
@@ -668,7 +696,8 @@ public static class SoftwareEffects
         }
     }
 
-    /// <summary>Hintergrund je LED (aus, Farbe oder Regenbogen).</summary>
+    /// <summary>Background per LED (off, color or rainbow).
+    /// Hintergrund je LED (aus, Farbe oder Regenbogen).</summary>
     static Rgb[] BackgroundRow(GroupSetting s, int n, double t)
     {
         var row = new Rgb[n];
@@ -695,7 +724,7 @@ public static class SoftwareEffects
         return new Rgb((byte)Math.Round(a.R + (b.R - a.R) * x), (byte)Math.Round(a.G + (b.G - a.G) * x), (byte)Math.Round(a.B + (b.B - a.B) * x));
     }
 
-    // Glut: schwarz → rot → orange → gelb → weißlich
+    // Ember: black → red → orange → yellow → whitish / Glut: schwarz → rot → orange → gelb → weißlich
     static Rgb FirePalette(double h)
     {
         h = Math.Clamp(h, 0, 1);
@@ -710,7 +739,8 @@ public static class SoftwareEffects
 
     static double Frac(double x) => x - Math.Floor(x);
 
-    /// <summary>Weiches Rauschen 0–1 über zwei Koordinaten (Werte an Gitterpunkten, dazwischen geglättet).</summary>
+    /// <summary>Smooth 2D noise 0–1 (grid values, smoothed between).
+    /// Weiches 2D-Rauschen 0–1 (Werte an Gitterpunkten, dazwischen geglättet).</summary>
     static double ValueNoise(int seed, double x, double y)
     {
         long x0 = (long)Math.Floor(x), y0 = (long)Math.Floor(y);
@@ -731,7 +761,8 @@ public static class SoftwareEffects
         }
     }
 
-    /// <summary>Gleichverteilte Pseudozufallszahl 0–1 aus drei Werten (SplitMix64).</summary>
+    /// <summary>Uniform pseudo-random number 0–1 from three values (SplitMix64).
+    /// Gleichverteilte Pseudozufallszahl 0–1 aus drei Werten (SplitMix64).</summary>
     static double Hash01(int seed, int i, long cycle)
     {
         unchecked

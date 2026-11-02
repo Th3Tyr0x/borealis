@@ -12,10 +12,10 @@
             <ColumnDefinition />
         </Grid.ColumnDefinitions>
 
-        <!-- Seitenleiste -->
+        <!-- Sidebar / Seitenleiste -->
         <Border Background="{DynamicResource Bg1}" BorderBrush="{DynamicResource Line}" BorderThickness="0,0,1,0">
             <DockPanel>
-                <!-- Logo: Polarstern über zwei roten Lichtbögen (wie Assets\Borealis.ico) -->
+                <!-- Logo: pole star over two red arcs (like Assets\Borealis.ico) / Polarstern über zwei roten Lichtbögen -->
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="20,24,0,30">
                     <Viewbox Width="36" Height="36">
                         <Canvas Width="48" Height="48">
@@ -42,7 +42,7 @@
             </DockPanel>
         </Border>
 
-        <!-- Inhalt -->
+        <!-- Content / Inhalt -->
         <DockPanel Grid.Column="1" Margin="32,24,28,22">
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,22">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">

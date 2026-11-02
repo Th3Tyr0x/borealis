@@ -4,7 +4,8 @@ using Borealis.App.Views;
 
 namespace Borealis.App;
 
-/// <summary>Kleiner Eingabedialog für einen Text (WPF hat keinen eingebauten).</summary>
+/// <summary>Small text input dialog (WPF has none built in).
+/// Kleiner Eingabedialog für Text (WPF hat keinen eingebauten).</summary>
 static class InputDialog
 {
     public static string? Show(Window owner, string title, string prompt, string initial)

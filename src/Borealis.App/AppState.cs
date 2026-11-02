@@ -5,8 +5,8 @@ using Borealis.Core.Profiles;
 namespace Borealis.App;
 
 /// <summary>
-/// Gemeinsamer Zustand der Oberfläche und Verbindung zum Dienst. Änderungen wirken wie in Armoury Crate sofort:
-/// Nach jeder Änderung wird das Profil kurz verzögert gespeichert und angewendet (auch während des Ziehens im Farbrad).
+/// Shared UI state and service connection. Every change is saved and applied after a short delay (also while dragging).
+/// Gemeinsamer UI-Zustand und Dienstverbindung. Jede Änderung wird kurz verzögert gespeichert und angewendet (auch beim Ziehen).
 /// </summary>
 sealed class AppState
 {
@@ -21,12 +21,15 @@ sealed class AppState
     public Dictionary<string, string> Labels { get; private set; } = new();
     public string? LastError { get; private set; }
     public IReadOnlyList<string> LastNotes { get; private set; } = [];
-    /// <summary>Ungespeicherte Änderung wartet auf den Timer oder wird gerade gesendet.</summary>
+    /// <summary>An unsaved change waits for the timer or is being sent.
+    /// Ungespeicherte Änderung wartet auf den Timer oder wird gesendet.</summary>
     public bool Pending => saveTimer.IsEnabled || saving;
 
-    /// <summary>Profil oder Status wurde vom Dienst neu geladen (Seiten bauen sich neu auf).</summary>
+    /// <summary>Profile or status reloaded from the service (pages rebuild).
+    /// Profil oder Status neu vom Dienst geladen (Seiten bauen sich neu auf).</summary>
     public event Action? Reloaded;
-    /// <summary>Verbindungs-/Speicherzustand hat sich geändert (Statuszeile).</summary>
+    /// <summary>Connection or save state changed (status line).
+    /// Verbindungs- oder Speicherzustand geändert (Statuszeile).</summary>
     public event Action? StateChanged;
 
     AppState()
@@ -35,12 +38,14 @@ sealed class AppState
         calibrationTimer.Tick += async (_, _) => { calibrationTimer.Stop(); await SendCalibrationAsync(); };
     }
 
-    /// <summary>Eigener Name der Zone oder ihr Name vom Dienst (übersetzt).</summary>
+    /// <summary>Custom zone name or the translated service name.
+    /// Eigener Zonenname oder der übersetzte Name vom Dienst.</summary>
     public string LabelOf(ZoneInfo z) => Labels.TryGetValue(z.Id, out var l) && !string.IsNullOrWhiteSpace(l) ? l : Loc.Term(z.Name);
 
     public IEnumerable<ZoneInfo> ZonesOf(string kind) => Status?.Zones.Where(z => z.Kind == kind) ?? [];
 
-    /// <summary>Nach einer Änderung an <see cref="Profile"/> oder <see cref="Labels"/> aufrufen.</summary>
+    /// <summary>Call after changing <see cref="Profile"/> or <see cref="Labels"/>.
+    /// Nach Änderungen an <see cref="Profile"/> oder <see cref="Labels"/> aufrufen.</summary>
     public void Edited()
     {
         saveTimer.Stop();
@@ -83,11 +88,13 @@ sealed class AppState
         await SendAsync(new PipeRequest { Command = Commands.Save, Profile = p, Labels = new(Labels) }, reload: true);
     }
 
-    /// <summary>Profil aus einer Datei übernehmen: speichern, aktiv setzen und anwenden.</summary>
+    /// <summary>Take over an imported profile: save, activate, apply.
+    /// Importiertes Profil übernehmen: speichern, aktivieren, anwenden.</summary>
     public Task ImportAsync(LightingProfile profile) =>
         SendAsync(new PipeRequest { Command = Commands.Save, Profile = profile.Clone(), Labels = new(Labels) }, reload: true);
 
-    /// <summary>Aktives Profil auf <see cref="LightingProfile.CreateDefault"/> zurücksetzen (Name bleibt).</summary>
+    /// <summary>Reset the active profile to <see cref="LightingProfile.CreateDefault"/> (name stays).
+    /// Aktives Profil auf <see cref="LightingProfile.CreateDefault"/> zurücksetzen (Name bleibt).</summary>
     public Task ResetActiveProfileAsync() =>
         SendAsync(new PipeRequest { Command = Commands.Save, Profile = LightingProfile.CreateDefault(Profile.Name), Labels = new(Labels) }, reload: true);
 
@@ -98,22 +105,26 @@ sealed class AppState
 
     public Task SetSettingsAsync(BorealisSettings s)
     {
-        // Einen gerade laufenden Farbabgleich nicht mit dem älteren Stand aus dem Status überschreiben
+        // Don't overwrite a running calibration with the older status
+        // Laufenden Farbabgleich nicht mit dem älteren Status überschreiben
         if (lastCalibration != null) s.Calibration = Clone(lastCalibration);
         return SendAsync(new PipeRequest { Command = Commands.SetSettings, Settings = s }, reload: false);
     }
 
-    // Farbabgleich: nur den jeweils letzten Stand senden, sobald die vorige Anfrage fertig ist (Schieberegler ziehen)
+    // Calibration: send only the latest state once the previous request is done (slider drag)
+    // Farbabgleich: nur den letzten Stand senden, sobald die vorige Anfrage fertig ist (Regler ziehen)
     readonly DispatcherTimer calibrationTimer = new() { Interval = TimeSpan.FromMilliseconds(80) };
     Dictionary<string, ZoneCalibration>? lastCalibration, pendingCalibration;
     (bool Set, Core.Lighting.Rgb? Color) pendingPreview;
     bool calibrationBusy;
 
-    /// <summary>Aktueller Farbabgleich (auch wenn er noch nicht beim Dienst angekommen ist).</summary>
+    /// <summary>Current calibration (even if not yet at the service).
+    /// Aktueller Farbabgleich (auch wenn noch nicht beim Dienst).</summary>
     public IReadOnlyDictionary<string, ZoneCalibration> Calibration =>
         lastCalibration ?? Status?.Settings.Calibration ?? new Dictionary<string, ZoneCalibration>();
 
-    /// <summary>Farbabgleich ändern; wird kurz verzögert gesendet und sofort angewendet.</summary>
+    /// <summary>Change calibration; sent after a short delay, applied at once.
+    /// Farbabgleich ändern; kurz verzögert gesendet, sofort angewendet.</summary>
     public void SetCalibration(IReadOnlyDictionary<string, ZoneCalibration> calibration)
     {
         lastCalibration = Clone(calibration);
@@ -122,7 +133,8 @@ sealed class AppState
         calibrationTimer.Start();
     }
 
-    /// <summary>Abgleich-Modus: Referenzfarbe auf allen Geräten zeigen; <c>null</c> beendet ihn (Profil wieder anwenden).</summary>
+    /// <summary>Calibration mode: reference color on all devices; <c>null</c> ends it.
+    /// Abgleich-Modus: Referenzfarbe auf allen Geräten; <c>null</c> beendet ihn.</summary>
     public void PreviewCalibration(Core.Lighting.Rgb? color)
     {
         pendingPreview = (true, color);
@@ -136,7 +148,8 @@ sealed class AppState
         calibrationBusy = true;
         try
         {
-            // Erst den Abgleich, dann die Vorschau, damit „Abgleich-Modus beenden“ den letzten Stand anwendet
+            // Calibration before preview, so ending calibration mode applies the latest state
+            // Erst Abgleich, dann Vorschau, damit das Beenden des Abgleich-Modus den letzten Stand anwendet
             while (pendingCalibration != null || pendingPreview.Set)
             {
                 if (pendingCalibration is { } c)
@@ -158,7 +171,8 @@ sealed class AppState
     static Dictionary<string, ZoneCalibration> Clone(IReadOnlyDictionary<string, ZoneCalibration> c) =>
         c.ToDictionary(k => k.Key, k => k.Value.Clone());
 
-    /// <summary>Kopie der Dienst-Einstellungen ändern und senden.</summary>
+    /// <summary>Change a copy of the service settings and send it.
+    /// Kopie der Dienst-Einstellungen ändern und senden.</summary>
     public Task UpdateSettingsAsync(Action<BorealisSettings> change)
     {
         var json = System.Text.Json.JsonSerializer.Serialize(Status?.Settings ?? new BorealisSettings(), ProfileStore.Json);
@@ -167,15 +181,18 @@ sealed class AppState
         return SetSettingsAsync(copy);
     }
 
-    /// <summary>LED-Anzahl eines ARGB-Headers im Controller setzen (wie „Ansteuerbare Header“ in Armoury Crate).</summary>
+    /// <summary>Set the LED count of an ARGB header in the controller.
+    /// LED-Anzahl eines ARGB-Headers im Controller setzen.</summary>
     public Task SetLedCountAsync(string zoneId, int count) =>
         SendAsync(new PipeRequest { Command = Commands.SetLedCount, Name = zoneId, Count = count }, reload: false);
 
-    /// <summary>Zähltest auf einem ARGB-Header zeigen; <c>null</c> beendet ihn.</summary>
+    /// <summary>Show the count test on an ARGB header; <c>null</c> ends it.
+    /// Zähltest auf einem ARGB-Header zeigen; <c>null</c> beendet ihn.</summary>
     public Task LedTestAsync(string? zoneId) =>
         SendAsync(new PipeRequest { Command = Commands.LedTest, Name = zoneId }, reload: false);
 
-    /// <summary>Letzte Messung der Lüfter und Temperaturen und Stand des Auto-Tunings; null, wenn der Dienst nicht erreichbar ist.</summary>
+    /// <summary>Latest fan/temperature reading and auto-tuning state; null if the service is unreachable.
+    /// Letzte Lüfter-/Temperaturmessung und Auto-Tuning-Stand; null, wenn der Dienst nicht erreichbar ist.</summary>
     public async Task<(Core.Hardware.SensorSnapshot? Sensors, FanTuneStatus? Tune)> SensorsAsync()
     {
         try
@@ -186,14 +203,16 @@ sealed class AppState
         catch (Exception ex) when (ex is System.IO.IOException or System.Text.Json.JsonException) { return (null, null); }
     }
 
-    /// <summary>Auto-Tuning der Lüfter starten oder abbrechen.</summary>
-    /// <param name="action">"start" (Lüfter und Pumpe), "pump" (nur Pumpe) oder "cancel".</param>
+    /// <summary>Start or cancel fan auto-tuning.
+    /// Auto-Tuning der Lüfter starten oder abbrechen.</summary>
+    /// <param name="action">"start" (fans and pump), "pump" or "cancel".
+    /// "start" (Lüfter und Pumpe), "pump" oder "cancel".</param>
     public Task FanTuneAsync(string action) =>
         SendAsync(new PipeRequest { Command = Commands.FanTune, Name = action }, reload: false);
 
     /// <summary>
-    /// ASUS-LightingService bzw. ASUS-Lüfterdienst ist installiert (laut Dienst). Ohne sie blendet die App die
-    /// zugehörigen Schalter und Hinweise aus (z. B. nach der Deinstallation von Armoury Crate).
+    /// The ASUS lighting/fan service is installed (per service); otherwise the app hides the related switches.
+    /// ASUS-Licht- bzw. Lüfterdienst ist installiert (laut Dienst); sonst blendet die App die Schalter aus.
     /// </summary>
     public bool AsusLightingInstalled => IsInstalled(Status?.AsusLightingService);
     public bool AsusFanServiceInstalled => IsInstalled(Status?.AsusFanService);
@@ -203,10 +222,12 @@ sealed class AppState
     public Task SetAsusLightingAsync(bool start) =>
         SendAsync(new PipeRequest { Command = Commands.AsusLightingService, Name = start ? "start" : "stop" }, reload: false);
 
-    /// <summary>Profil aus dem Dienst wieder übernehmen (z. B. nach „Armoury Crate zurückgeben“).</summary>
+    /// <summary>Reload the profile from the service.
+    /// Profil neu vom Dienst übernehmen.</summary>
     public Task ReapplyAsync() => SendAsync(new PipeRequest { Command = Commands.Reapply }, reload: true);
 
-    /// <summary>Dienst soll den Hardwarezugriff neu versuchen (nach der Einrichtung von PawnIO).</summary>
+    /// <summary>Ask the service to retry hardware access (after PawnIO setup).
+    /// Dienst soll den Hardwarezugriff neu versuchen (nach PawnIO-Einrichtung).</summary>
     public Task HardwareRetryAsync() => SendAsync(new PipeRequest { Command = Commands.HardwareRetry }, reload: false);
 
     async Task SendAsync(PipeRequest request, bool reload)

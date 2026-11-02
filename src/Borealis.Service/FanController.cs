@@ -5,8 +5,8 @@ using Borealis.Core.Profiles;
 namespace Borealis.Service;
 
 /// <summary>
-/// Schreibt die Lüfterkurven in den Chip (SmartFan IV, wie der ASUS-Lüfterdienst). Der Chip regelt danach selbst;
-/// Borealis muss dafür nicht weiterlaufen. Aufrufe kommen nacheinander aus der Laufzeit (unter deren Sperre).
+/// Writes the fan curves to the chip (SmartFan IV); the chip then regulates without Borealis. Calls come serially from the runtime (under its lock).
+/// Schreibt die Lüfterkurven in den Chip (SmartFan IV); der regelt danach ohne Borealis. Aufrufe kommen nacheinander aus der Laufzeit (unter deren Sperre).
 /// </summary>
 sealed class FanController : IDisposable
 {
@@ -24,8 +24,8 @@ sealed class FanController : IDisposable
     }
 
     /// <summary>
-    /// Regelregister 0x00–0x0F je Kanal einmal ins Protokoll (Quelle, Modus, Schrittzeiten, Start-/Stoppwerte), als
-    /// Grundlage für weitere Einstellungen wie die Reaktionszeit. Nur lesend.
+    /// Logs control registers 0x00–0x0F per channel once (source, mode, step times, start/stop values) as a basis for settings like response time. Read-only.
+    /// Schreibt die Regelregister 0x00–0x0F je Kanal einmal ins Protokoll (Quelle, Modus, Schrittzeiten, Start-/Stoppwerte), als Grundlage z. B. für die Reaktionszeit. Nur lesend.
     /// </summary>
     static void LogControlBlocks(Nct6799 c)
     {
@@ -37,7 +37,8 @@ sealed class FanController : IDisposable
         catch (Exception ex) when (ex is IOException or TimeoutException) { Log.Warn("Regelregister nicht lesbar: " + ex.Message); }
     }
 
-    /// <summary>Aktuelle Kurven aus dem Chip lesen (Ausgangspunkt für „Benutzerdefiniert“, so wie ASUS sie gesetzt hat).</summary>
+    /// <summary>Read the current curves from the chip (starting point for "Custom", as ASUS set them).
+    /// Aktuelle Kurven aus dem Chip lesen (Ausgangspunkt für „Benutzerdefiniert“, wie ASUS sie gesetzt hat).</summary>
     public Dictionary<string, List<FanPoint>> ReadCurves()
     {
         var result = new Dictionary<string, List<FanPoint>>();
@@ -50,7 +51,8 @@ sealed class FanController : IDisposable
         return result;
     }
 
-    /// <summary>Kurven aller Lüfter schreiben und zurücklesen; Abweichungen landen in den Hinweisen.</summary>
+    /// <summary>Write and read back all fan curves; differences go into the notes.
+    /// Kurven aller Lüfter schreiben und zurücklesen; Abweichungen landen in den Hinweisen.</summary>
     public List<string> Apply(FanSettings settings)
     {
         var notes = new List<string>();

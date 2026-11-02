@@ -1,5 +1,5 @@
 <Project>
-  <!-- Gemeinsame Einstellungen: Windows-only, x64 (die ENE-RAM-HAL ist eine x64-In-proc-DLL) -->
+  <!-- Shared settings: Windows only, x64 (the ENE RAM HAL is an x64 in-proc DLL) / Gemeinsame Einstellungen: nur Windows, x64 -->
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <PlatformTarget>x64</PlatformTarget>

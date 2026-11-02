@@ -3,9 +3,10 @@ using System.Runtime.Intrinsics.X86;
 namespace Borealis.Core.Hardware;
 
 /// <summary>
-/// CPU-Temperatur von AMD Zen (Familie 17h–1Ah) aus dem SMN-Raum der CPU: Tctl und je CCD.
-/// Gelesen über das PawnIO-Modul AMDFamily17 (<c>ioctl_read_smn</c>: Index 0x60/Daten 0x64 des Host-Bridge 0:0.0),
-/// unter der PCI-Sperre, die auch der ASUS-Lüfterdienst nimmt. Formeln wie Linux k10temp / LibreHardwareMonitor.
+/// AMD Zen (family 17h–1Ah) CPU temperature from SMN: Tctl and per CCD, via the PawnIO module AMDFamily17 under the
+/// shared PCI lock. Formulas as in Linux k10temp / LibreHardwareMonitor.
+/// CPU-Temperatur von AMD Zen (Familie 17h–1Ah) aus dem SMN: Tctl und je CCD, über das PawnIO-Modul AMDFamily17 unter
+/// der gemeinsamen PCI-Sperre. Formeln wie Linux k10temp / LibreHardwareMonitor.
 /// </summary>
 public sealed class AmdCpuTemperature : IDisposable
 {
@@ -32,12 +33,13 @@ public sealed class AmdCpuTemperature : IDisposable
         };
     }
 
-    /// <summary>Nur für AMD-CPUs ab Zen; sonst null. Wirft <see cref="PawnIoMissingException"/>, wenn PawnIO fehlt.</summary>
+    /// <summary>AMD Zen or newer only, else null. Throws <see cref="PawnIoMissingException"/> without PawnIO.
+    /// Nur AMD ab Zen, sonst null. Wirft <see cref="PawnIoMissingException"/> ohne PawnIO.</summary>
     public static AmdCpuTemperature? Create()
     {
         if (!X86Base.IsSupported) return null;
         var (_, ebx, ecx, edx) = X86Base.CpuId(0, 0);
-        // „AuthenticAMD“
+        // "AuthenticAMD"
         if (ebx != 0x68747541 || edx != 0x69746E65 || ecx != 0x444D4163) return null;
         var (eax, _, _, _) = X86Base.CpuId(1, 0);
         int baseFamily = (eax >> 8) & 0xF, family = baseFamily == 0xF ? baseFamily + ((eax >> 20) & 0xFF) : baseFamily;
@@ -46,7 +48,8 @@ public sealed class AmdCpuTemperature : IDisposable
         return new AmdCpuTemperature(PawnIoModule.Load("AMDFamily17"), family, model);
     }
 
-    /// <summary>Tctl (Steuertemperatur, nach der AMD und die Lüfter regeln) und die Temperaturen der aktiven CCDs.</summary>
+    /// <summary>Tctl (control temperature used by AMD and the fans) and the active CCDs.
+    /// Tctl (Steuertemperatur für AMD und die Lüfter) und die aktiven CCDs.</summary>
     public (double Tctl, List<double> Ccds) Read()
     {
         if (!pci.Enter()) throw new TimeoutException("PCI-Sperre nicht frei.");
@@ -54,7 +57,7 @@ public sealed class AmdCpuTemperature : IDisposable
         {
             uint raw = ReadSmn(ThmTconCurTmp);
             double tctl = (raw >> 21) * 0.125;
-            // RANGE_SEL bzw. TJ_SEL: Wert ist um 49 °C verschoben
+            // RANGE_SEL or TJ_SEL: value is offset by 49 °C / Wert ist um 49 °C verschoben
             if ((raw & 0x80000) != 0 || (raw & 0x30000) == 0x30000) tctl -= 49;
             var ccds = new List<double>();
             for (int i = 0; i < ccdCount; i++)

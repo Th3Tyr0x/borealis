@@ -3,8 +3,8 @@ using Borealis.Core.Hardware;
 namespace Borealis.Service;
 
 /// <summary>
-/// Hardwaretest der Lüfterkurven (<c>Borealis.Service --fantest</c>, Administrator): liest alle Kurven, setzt
-/// Gehäuselüfter 1 kurz auf eine flache 100-%-Kurve und schreibt danach die Originalkurve exakt zurück.
+/// Fan curve hardware test (<c>Borealis.Service --fantest</c>, admin): reads all curves, sets chassis fan 1 briefly to a flat 100 % curve, then restores the original exactly.
+/// Hardwaretest der Lüfterkurven (<c>Borealis.Service --fantest</c>, Admin): liest alle Kurven, setzt Gehäuselüfter 1 kurz auf flache 100 % und schreibt danach die Originalkurve exakt zurück.
 /// </summary>
 static class FanTest
 {

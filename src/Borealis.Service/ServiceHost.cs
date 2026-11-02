@@ -3,14 +3,15 @@ using System.Runtime.InteropServices;
 namespace Borealis.Service;
 
 /// <summary>
-/// Minimaler Windows-Dienst-Rahmen über advapi32 (StartServiceCtrlDispatcher, RegisterServiceCtrlHandlerEx,
-/// SetServiceStatus). Ersetzt Microsoft.Extensions.Hosting.WindowsServices, damit keine NuGet-Pakete nötig sind.
+/// Minimal Windows service host via advapi32 (StartServiceCtrlDispatcher, RegisterServiceCtrlHandlerEx, SetServiceStatus); replaces Microsoft.Extensions.Hosting.WindowsServices without NuGet.
+/// Minimaler Windows-Dienst-Rahmen über advapi32 (StartServiceCtrlDispatcher, RegisterServiceCtrlHandlerEx, SetServiceStatus); ersetzt Microsoft.Extensions.Hosting.WindowsServices ohne NuGet.
 /// </summary>
 sealed class ServiceHost
 {
     readonly string name;
     readonly Func<CancellationToken, Task> run;
     readonly CancellationTokenSource stopping = new();
+    // Keep the delegates alive, or the GC collects them while Windows still calls them
     // Delegaten festhalten, sonst sammelt der GC sie ein, während Windows sie noch aufruft
     readonly Native.ServiceMain mainDelegate;
     readonly Native.HandlerEx handlerDelegate;
@@ -25,7 +26,8 @@ sealed class ServiceHost
         handlerDelegate = Handler;
     }
 
-    /// <summary>Blockiert, bis der Dienst endet. Gibt false zurück, wenn der Prozess nicht vom Dienststeuerungs-Manager gestartet wurde.</summary>
+    /// <summary>Blocks until the service ends; false if the process wasn't started by the SCM.
+    /// Blockiert, bis der Dienst endet; false, wenn der Prozess nicht vom SCM gestartet wurde.</summary>
     public bool RunAsService()
     {
         var table = new Native.SERVICE_TABLE_ENTRY[]
@@ -58,7 +60,8 @@ sealed class ServiceHost
         SetState(Native.SERVICE_STOPPED, 0);
     }
 
-    /// <summary>Wird bei Standby/Fortsetzen aufgerufen (PBT_APMRESUMEAUTOMATIC = 0x12, PBT_APMSUSPEND = 0x4).</summary>
+    /// <summary>Called on standby/resume (PBT_APMRESUMEAUTOMATIC = 0x12, PBT_APMSUSPEND = 0x4).
+    /// Aufruf bei Standby/Fortsetzen (PBT_APMRESUMEAUTOMATIC = 0x12, PBT_APMSUSPEND = 0x4).</summary>
     public event Action<int>? PowerEvent;
 
     int Handler(int control, int eventType, IntPtr eventData, IntPtr context)

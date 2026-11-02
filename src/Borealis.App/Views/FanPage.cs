@@ -11,8 +11,8 @@ using Borealis.Core.Profiles;
 namespace Borealis.App.Views;
 
 /// <summary>
-/// „Lüftersteuerung“: Drehzahl und Leistung je Lüfteranschluss sowie die Temperaturen, jede Sekunde aktualisiert.
-/// Die Werte liest der Dienst über den ASUS-IO-Treiber wie Armoury Crate; die Kurven schreibt er in den Lüfter-Chip.
+/// "Fan control": RPM and duty per fan header plus temperatures, updated every second; the service writes the curves to the fan chip.
+/// „Lüftersteuerung“: Drehzahl und Leistung je Anschluss plus Temperaturen, jede Sekunde; die Kurven schreibt der Dienst in den Chip.
 /// </summary>
 sealed class FanPage : UserControl, IPage
 {
@@ -27,7 +27,8 @@ sealed class FanPage : UserControl, IPage
     string layoutKey = "";
     bool polling, sending;
     SensorSnapshot? last;
-    // Arbeitskopie der Lüftereinstellungen; wird nach jeder Antwort des Dienstes neu aus dem Status geholt
+    // Working copy of the fan settings; refreshed from the status after each service reply
+    // Arbeitskopie der Lüftereinstellungen; nach jeder Antwort des Dienstes neu aus dem Status
     FanSettings working = new();
     static string selectedFan = BoardFans.Headers[0].Id;
 
@@ -82,10 +83,12 @@ sealed class FanPage : UserControl, IPage
 
     static bool ShowAll => S.Status?.Settings.ShowUnconnectedFans == true;
 
-    /// <summary>Lüfter anzeigen? Nicht angeschlossene nur mit der Einstellung „Nicht angeschlossene Lüfter anzeigen“.</summary>
+    /// <summary>Show this fan? Unconnected ones only with "Show unconnected fans".
+    /// Lüfter zeigen? Nicht angeschlossene nur mit „Nicht angeschlossene Lüfter anzeigen“.</summary>
     static bool Visible(FanSensor f) => f.Connected || ShowAll;
 
-    /// <summary>Anschluss in der Kurvenauswahl zeigen (ohne Messung alle).</summary>
+    /// <summary>Show the header in the curve picker (all if there's no reading).
+    /// Anschluss in der Kurvenauswahl zeigen (ohne Messung alle).</summary>
     bool HeaderVisible(FanHeader h) => last?.Fans.FirstOrDefault(f => f.Id == h.Id) is not { } f || Visible(f);
 
     void Show(SensorSnapshot? s)
@@ -93,6 +96,7 @@ sealed class FanPage : UserControl, IPage
         string key = s == null ? "-" : string.Join(",", s.Fans.Where(Visible).Select(f => f.Id)) + "|" + string.Join(",", s.Temperatures.Select(t => t.Id));
         if (key != layoutKey)
         {
+            // The curve picker also depends on which fans are connected
             // Auch die Kurvenauswahl hängt davon ab, welche Lüfter angeschlossen sind
             if (layoutKey != "") BuildControls();
             Build(s, key);
@@ -109,9 +113,8 @@ sealed class FanPage : UserControl, IPage
     readonly TextBlock footer = new() { Style = (Style)Application.Current.FindResource("Hint"), Margin = new Thickness(0, 6, 0, 0), TextWrapping = TextWrapping.Wrap };
     readonly TextBlock error = new() { Foreground = (Brush)Application.Current.FindResource("Warn"), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 14), Visibility = Visibility.Collapsed };
 
-    /// <summary>
-    /// Regelung: Übernahme vom ASUS-Lüfterdienst, Modus (Leise … Benutzerdefiniert) und Kurve je Lüfter.
-    /// </summary>
+    /// <summary>Control: takeover from the ASUS fan service, mode (Silent … Custom) and curve per fan.
+    /// Regelung: Übernahme vom ASUS-Lüfterdienst, Modus (Leise … Benutzerdefiniert) und Kurve je Lüfter.</summary>
     void BuildControls()
     {
         var status = S.Status;
@@ -138,7 +141,8 @@ sealed class FanPage : UserControl, IPage
         toggle.Click += async (_, _) =>
         {
             working.Enabled = toggle.IsChecked == true;
-            // Beim ersten Einschalten die Kurven übernehmen, die ASUS gerade im Chip hat (der Dienst liest sie aus)
+            // On first enable take over the curves ASUS has in the chip (the service reads them)
+            // Beim ersten Einschalten die Kurven übernehmen, die ASUS im Chip hat (der Dienst liest sie)
             if (working.Enabled && working.Curves.Count == 0) working.Mode = FanMode.Custom;
             await SendAsync();
         };
@@ -234,6 +238,7 @@ sealed class FanPage : UserControl, IPage
                 sources.Margin = new Thickness(0, 0, 0, 10);
                 sourceRow.Children.Add(sources);
             }
+            // Dashed for comparison: the computed curve if customized, else the same one without measurement
             // Gestrichelt zum Vergleich: bei eigener Anpassung die berechnete Kurve, sonst dieselbe ohne Messung
             editor.SetReference(own != null ? FanSettings.Preset(working.Mode, h, tuning)
                 : tuned ? FanSettings.Normalize(FanSettings.Preset(working.Mode, h)) : null);
@@ -268,13 +273,15 @@ sealed class FanPage : UserControl, IPage
     readonly Grid tuneTrack = new() { Width = 260, Margin = new Thickness(16, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
     readonly Border tuneBar = new() { Height = 4, CornerRadius = new CornerRadius(2), HorizontalAlignment = HorizontalAlignment.Left };
     readonly TextBlock tuneText = new() { VerticalAlignment = VerticalAlignment.Center, TextWrapping = TextWrapping.Wrap };
-    // Nicht fokussierbar: sonst löst nach dem Start ein Tastendruck (Leertaste/Enter) versehentlich „Abbrechen“ aus
+    // Not focusable, or a key press after start (Space/Enter) would hit "Cancel"
+    // Nicht fokussierbar, sonst löst ein Tastendruck (Leertaste/Enter) versehentlich „Abbrechen“ aus
     readonly Button tuneButton = new() { MinWidth = 170, Focusable = false };
-    // Knöpfe „Messen“ je Lüfter (während eines Laufs gesperrt)
+    // "Measure" buttons per fan (locked during a run) / Knöpfe „Messen“ je Lüfter (während eines Laufs gesperrt)
     readonly List<Button> measureButtons = [];
     bool tuneRunning, tuneHandlerSet;
 
-    /// <summary>Auto-Tuning: Start/Abbruch, Fortschritt (live über <see cref="UpdateTune"/>) und Ergebnisse je Lüfter.</summary>
+    /// <summary>Auto-tuning: start/cancel, live progress (<see cref="UpdateTune"/>) and results per fan.
+    /// Auto-Tuning: Start/Abbruch, Fortschritt (<see cref="UpdateTune"/>) und Ergebnisse je Lüfter.</summary>
     void BuildTuning(StackPanel panel, bool on)
     {
         panel.Children.Add(Ui.Section("Auto-Tuning", 24));
@@ -321,7 +328,7 @@ sealed class FanPage : UserControl, IPage
         panel.Children.Add(row);
         UpdateTuneVisuals(null);
 
-        // Je Lüfter: Ergebnis und eigener Knopf „Messen“
+        // Per fan: result and its own "Measure" button / Je Lüfter: Ergebnis und eigener Knopf „Messen“
         measureButtons.Clear();
         var list = new StackPanel { Margin = new Thickness(0, 14, 0, 0) };
         foreach (var h in BoardFans.Headers.Where(HeaderVisible))
@@ -351,7 +358,8 @@ sealed class FanPage : UserControl, IPage
         panel.Children.Add(list);
     }
 
-    /// <summary>Messergebnis eines Lüfters als eine Zeile.</summary>
+    /// <summary>One fan's result as a single line.
+    /// Messergebnis eines Lüfters als eine Zeile.</summary>
     string TuningText(FanHeader h)
     {
         if (!working.Tuning.TryGetValue(h.Id, out var t)) return Loc.T("noch kein Tuning", "not tuned yet");
@@ -366,7 +374,8 @@ sealed class FanPage : UserControl, IPage
                      $"{run}{start}, at most {t.MaxRpm:N0} RPM (tuning {t.Time:MM/dd HH:mm}{rough})");
     }
 
-    /// <summary>Zustand eines Dienstes vom Borealis-Dienst (deutsch) für die Anzeige.</summary>
+    /// <summary>Service state from the Borealis service (German) for display.
+    /// Dienstzustand vom Borealis-Dienst (deutsch) für die Anzeige.</summary>
     static string ServiceState(string? state) => state switch
     {
         null => "?",
@@ -376,7 +385,8 @@ sealed class FanPage : UserControl, IPage
         _ => state,
     };
 
-    /// <summary>Fortschrittstexte des Auto-Tunings kommen deutsch vom Dienst; für Englisch übersetzen.</summary>
+    /// <summary>Auto-tuning progress texts come in German from the service; translate for English.
+    /// Fortschrittstexte kommen deutsch vom Dienst; für Englisch übersetzen.</summary>
     static string TuneText(string message)
     {
         if (!Loc.English) return message;
@@ -407,7 +417,8 @@ sealed class FanPage : UserControl, IPage
 
     FanTuneStatus? lastTune;
 
-    /// <summary>Fortschritt aus jeder Sensorabfrage; nach dem Ende Einstellungen neu laden (Ergebnisse, Kurven).</summary>
+    /// <summary>Progress from each sensor poll; reload settings when done (results, curves).
+    /// Fortschritt aus jeder Sensorabfrage; danach Einstellungen neu laden (Ergebnisse, Kurven).</summary>
     async void UpdateTune(FanTuneStatus? t)
     {
         bool running = t?.Running == true;
@@ -443,7 +454,7 @@ sealed class FanPage : UserControl, IPage
         layoutKey = key;
         fanCards.Clear();
         tempCards.Clear();
-        // Wiederverwendete Teile erst aus dem alten Aufbau lösen
+        // Detach reused parts from the old layout first / Wiederverwendete Teile erst aus dem alten Aufbau lösen
         foreach (var t in new FrameworkElement[] { error, footer, controls }) (t.Parent as Panel)?.Children.Remove(t);
         var root = new StackPanel { MaxWidth = 972, HorizontalAlignment = HorizontalAlignment.Left };
         root.Children.Add(new TextBlock
@@ -506,7 +517,8 @@ sealed class FanPage : UserControl, IPage
     static TextBlock Heading(string text, double top = 0) =>
         new() { Text = text, FontSize = 16, FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, top, 0, 10) };
 
-    /// <summary>Karte eines Lüfteranschlusses: Symbol (dreht sich, solange der Lüfter läuft), Drehzahl, Leistung.</summary>
+    /// <summary>Fan header card: icon (spins while the fan runs), RPM, duty.
+    /// Karte eines Lüfteranschlusses: Symbol (dreht sich, solange er läuft), Drehzahl, Leistung.</summary>
     sealed class FanCard
     {
         public Border Root { get; }
@@ -567,7 +579,8 @@ sealed class FanPage : UserControl, IPage
         }
     }
 
-    /// <summary>Karte eines Temperaturfühlers; die Farbe zeigt grob, wie warm es ist.</summary>
+    /// <summary>Temperature sensor card; the color roughly shows how warm it is.
+    /// Karte eines Temperaturfühlers; die Farbe zeigt grob, wie warm es ist.</summary>
     sealed class TempCard
     {
         public Border Root { get; }

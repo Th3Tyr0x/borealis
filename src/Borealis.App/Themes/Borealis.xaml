@@ -1,10 +1,10 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Farben stehen in Themes/Dark.xaml bzw. Themes/Light.xaml (DynamicResource, umschaltbar) -->
+    <!-- Colors live in Themes/Dark.xaml and Themes/Light.xaml (DynamicResource) / Farben in Dark.xaml bzw. Light.xaml -->
 
 
-    <!-- Symbole (24×24, als Strich gezeichnet) -->
+    <!-- Icons (24×24, stroked) / Symbole (24×24, als Strich) -->
     <Geometry x:Key="IconSync">M12,8 A4,4 0 1 1 11.99,8 Z M12,1.5 L12,4.5 M12,19.5 L12,22.5 M1.5,12 L4.5,12 M19.5,12 L22.5,12 M4.6,4.6 L6.7,6.7 M17.3,17.3 L19.4,19.4 M4.6,19.4 L6.7,17.3 M17.3,6.7 L19.4,4.6</Geometry>
     <Geometry x:Key="IconDevices">M7,7 L17,7 L17,17 L7,17 Z M10,10 L14,10 L14,14 L10,14 Z M10,3 L10,7 M14,3 L14,7 M10,17 L10,21 M14,17 L14,21 M3,10 L7,10 M3,14 L7,14 M17,10 L21,10 M17,14 L21,14</Geometry>
     <Geometry x:Key="IconFan">M10,12 A2,2 0 1 0 14,12 A2,2 0 1 0 10,12 Z M12,10 C11,5.5 13,2.5 16,3 C18.5,3.5 17.5,8 13.6,10.6 M13.8,13 C18,14 20.2,17 18.3,19.4 C16.6,21.4 13.3,18.5 12.4,14 M10.2,12.9 C6.8,16 3.4,15.8 3,13.3 C2.6,10.8 6.2,9.6 10.1,11.1</Geometry>
@@ -15,7 +15,7 @@
     <Geometry x:Key="IconProfile">M12,3 L21,8 L12,13 L3,8 Z M3,12.5 L12,17.5 L21,12.5 M3,16.5 L12,21.5 L21,16.5</Geometry>
     <Geometry x:Key="IconPlus">M12,5 L12,19 M5,12 L19,12</Geometry>
 
-    <!-- Fenstertexte -->
+    <!-- Window texts / Fenstertexte -->
     <Style x:Key="PageTitle" TargetType="TextBlock">
         <Setter Property="FontSize" Value="28" />
         <Setter Property="FontWeight" Value="Bold" />
@@ -34,7 +34,7 @@
         <Setter Property="FontSize" Value="12" />
     </Style>
 
-    <!-- Karte -->
+    <!-- Card / Karte -->
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource Bg2}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
@@ -43,7 +43,7 @@
         <Setter Property="Padding" Value="18" />
     </Style>
 
-    <!-- Knöpfe -->
+    <!-- Buttons / Knöpfe -->
     <Style TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource Text}" />
         <Setter Property="Background" Value="{DynamicResource Bg3}" />
@@ -89,7 +89,7 @@
         </Setter>
     </Style>
 
-    <!-- Seitenleiste: Tag = Symbol -->
+    <!-- Sidebar: Tag = icon / Seitenleiste: Tag = Symbol -->
     <Style x:Key="NavItem" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
         <Setter Property="FontSize" Value="14" />
@@ -127,7 +127,7 @@
         </Setter>
     </Style>
 
-    <!-- Effekt-Kachel: Tag = Symbol -->
+    <!-- Effect tile: Tag = icon / Effekt-Kachel: Tag = Symbol -->
     <Style x:Key="EffectTile" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
         <Setter Property="Width" Value="112" />
@@ -167,7 +167,7 @@
         </Setter>
     </Style>
 
-    <!-- Segmentschalter (Langsam/Normal/Schnell, Reiter) -->
+    <!-- Segmented switch (Slow/Normal/Fast, tabs) / Segmentschalter -->
     <Style x:Key="Segment" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
         <Setter Property="Padding" Value="13,7" />
@@ -195,7 +195,7 @@
         </Setter>
     </Style>
 
-    <!-- Kippschalter -->
+    <!-- Toggle switch / Kippschalter -->
     <Style x:Key="Switch" TargetType="CheckBox">
         <Setter Property="Foreground" Value="{DynamicResource Text}" />
         <Setter Property="Cursor" Value="Hand" />
@@ -227,7 +227,7 @@
         </Setter>
     </Style>
 
-    <!-- Geräte-/Zonen-Karte zum Ein-/Ausschalten -->
+    <!-- Device/zone card to switch on/off / Geräte-/Zonen-Karte zum Ein-/Ausschalten -->
     <Style x:Key="Chip" TargetType="ToggleButton">
         <Setter Property="Foreground" Value="{DynamicResource Text}" />
         <Setter Property="Cursor" Value="Hand" />
@@ -258,7 +258,7 @@
         </Setter>
     </Style>
 
-    <!-- Eingabefeld -->
+    <!-- Text box / Eingabefeld -->
     <Style TargetType="TextBox">
         <Setter Property="Foreground" Value="{DynamicResource Text}" />
         <Setter Property="Background" Value="{DynamicResource Bg3}" />
@@ -282,7 +282,7 @@
         </Setter>
     </Style>
 
-    <!-- Auswahlliste (Profile) -->
+    <!-- Combo box (profiles) / Auswahlliste (Profile) -->
     <Style x:Key="ComboToggle" TargetType="ToggleButton">
         <Setter Property="Template">
             <Setter.Value>
@@ -348,7 +348,7 @@
         </Setter>
     </Style>
 
-    <!-- Schmale dunkle Bildlaufleiste -->
+    <!-- Slim dark scrollbar / Schmale dunkle Bildlaufleiste -->
     <Style TargetType="ScrollBar">
         <Setter Property="Width" Value="8" />
         <Setter Property="MinWidth" Value="8" />
@@ -371,7 +371,7 @@
         </Setter>
     </Style>
 
-    <!-- Reiter wie in Armoury Crate: Text, gewählter Reiter mit dunkelrotem Verlauf und roter Unterkante -->
+    <!-- Tabs: text, selected tab with dark red gradient and red underline / Reiter mit dunkelrotem Verlauf und roter Unterkante -->
     <Style x:Key="PageTab" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{DynamicResource TextDim}" />
         <Setter Property="FontSize" Value="16" />
@@ -401,7 +401,7 @@
         </Setter>
     </Style>
 
-    <!-- Kontrollkästchen wie in Armoury Crate: weißes, abgerundetes Quadrat mit Haken -->
+    <!-- Check box: white rounded square with check mark / Kontrollkästchen: weißes, abgerundetes Quadrat mit Haken -->
     <Style x:Key="AcCheck" TargetType="CheckBox">
         <Setter Property="Foreground" Value="{DynamicResource Text}" />
         <Setter Property="FontSize" Value="15" />
@@ -433,7 +433,7 @@
         </Setter>
     </Style>
 
-    <!-- Textverknüpfung (unterstrichen) -->
+    <!-- Text link (underlined) / Textverknüpfung (unterstrichen) -->
     <Style x:Key="LinkButton" TargetType="Button">
         <Setter Property="Foreground" Value="{DynamicResource Text}" />
         <Setter Property="Cursor" Value="Hand" />
@@ -452,7 +452,7 @@
         </Setter>
     </Style>
 
-    <!-- Schieberegler: gefüllter Teil rot, runder weißer Griff -->
+    <!-- Slider: red filled part, round white thumb / Schieberegler: roter Teil, runder weißer Griff -->
     <Style x:Key="SliderRepeat" TargetType="RepeatButton">
         <Setter Property="Focusable" Value="False" />
         <Setter Property="Template">
@@ -467,7 +467,7 @@
     </Style>
     <Style TargetType="Slider">
         <Setter Property="Height" Value="24" />
-        <!-- Farbe der Füllung und des Knopfrands (Farbabgleich: Rot/Grün/Blau) -->
+        <!-- Fill and thumb border color (calibration: R/G/B) / Farbe von Füllung und Knopfrand (Farbabgleich) -->
         <Setter Property="Foreground" Value="{DynamicResource Accent}" />
         <Setter Property="IsMoveToPointEnabled" Value="True" />
         <Setter Property="Cursor" Value="Hand" />
@@ -502,7 +502,7 @@
         </Setter>
     </Style>
 
-    <!-- Ein/Aus wie in Armoury Crate: Rahmen mit „ON/OFF“ und eckigem Knopf -->
+    <!-- On/off: frame with "ON/OFF" and square knob / Ein/Aus: Rahmen mit „ON/OFF“ und eckigem Knopf -->
     <Style x:Key="AcToggle" TargetType="CheckBox">
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -539,7 +539,7 @@
         <Setter Property="BorderBrush" Value="{DynamicResource Line}" />
     </Style>
 
-    <!-- Kontextmenü (Rechtsklick) im Borealis-Design statt im Windows-Standard -->
+    <!-- Context menu in Borealis style / Kontextmenü im Borealis-Design -->
     <Style TargetType="ContextMenu">
         <Setter Property="OverridesDefaultStyle" Value="True" />
         <Setter Property="Background" Value="{DynamicResource Bg2}" />

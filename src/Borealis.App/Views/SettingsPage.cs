@@ -5,7 +5,8 @@ using Borealis.Core.Profiles;
 
 namespace Borealis.App.Views;
 
-/// <summary>Profile verwalten, Verhalten des Dienstes, Armoury Crate, Info.</summary>
+/// <summary>Profiles, service behavior, Armoury Crate, info.
+/// Profile, Verhalten des Dienstes, Armoury Crate, Info.</summary>
 sealed class SettingsPage : UserControl, IPage
 {
     static AppState S => AppState.Instance;
@@ -21,7 +22,7 @@ sealed class SettingsPage : UserControl, IPage
         root.Children.Add(Ui.Card(AppearanceCard()));
         root.Children.Add(Ui.Card(HardwareCard()));
 
-        // Profile
+        // Profiles / Profile
         var profiles = new StackPanel();
         profiles.Children.Add(Ui.Section(Loc.T("Profile", "Profiles")));
         foreach (var name in status?.Profiles ?? [])
@@ -93,11 +94,11 @@ sealed class SettingsPage : UserControl, IPage
                                             "A profile file contains the lighting (effects, colors, effect after shutdown). Fans, color matching and zone names stay on this PC."), 8));
         root.Children.Add(Ui.Card(profiles));
 
-        // Verhalten
+        // Behavior / Verhalten
         var behavior = new StackPanel();
         behavior.Children.Add(Ui.Section(Loc.T("Verhalten", "Behavior")));
         var settings = status?.Settings ?? new BorealisSettings();
-        // Gilt nur für diesen Benutzer und braucht den Dienst nicht
+        // Per user only, doesn't need the service / Nur für diesen Benutzer, braucht den Dienst nicht
         var autostart = new CheckBox { Style = Ui.Style("Switch"), IsChecked = Autostart.IsEnabled, Content = Loc.T("Borealis bei der Anmeldung im Infobereich starten", "Start Borealis in the notification area at sign-in") };
         autostart.Click += (_, _) => Autostart.Set(autostart.IsChecked == true);
         behavior.Children.Add(autostart);
@@ -124,7 +125,7 @@ sealed class SettingsPage : UserControl, IPage
         showFans.Click += Save;
         resume.Click += Save;
         hardware.Click += Save;
-        // Schalter für ASUS-Dienste nur, solange sie installiert sind
+        // Switches for ASUS services only while installed / Schalter für ASUS-Dienste nur, solange installiert
         if (S.AsusLightingInstalled)
         {
             behavior.Children.Add(stopLs);
@@ -136,7 +137,7 @@ sealed class SettingsPage : UserControl, IPage
         behavior.Children.Add(hardware);
         root.Children.Add(Ui.Card(behavior));
 
-        // Armoury Crate (nur, solange der LightingService installiert ist)
+        // Armoury Crate (only while the LightingService is installed) / (nur, solange der LightingService installiert ist)
         var ac = new StackPanel();
         ac.Children.Add(Ui.Section("Armoury Crate"));
         bool borealisControls = settings.StopAsusLightingService;
@@ -166,7 +167,7 @@ sealed class SettingsPage : UserControl, IPage
         info.Children.Add(new TextBlock { Text = $"{Loc.T("Borealis-Dienst", "Borealis service")}: {(status == null ? Loc.T("nicht verbunden", "not connected") : "v" + status.ServiceVersion)}" });
         info.Children.Add(new TextBlock { Text = $"App: v{typeof(SettingsPage).Assembly.GetName().Version} · .NET {Environment.Version}", Margin = new Thickness(0, 4, 0, 0) });
         info.Children.Add(UpdatePanel());
-        // Hinweis, den die GPL für Programme mit Oberfläche vorsieht
+        // Notice the GPL asks for in interactive programs / Hinweis, den die GPL für Programme mit Oberfläche vorsieht
         info.Children.Add(Ui.Hint(Loc.T(
             "Borealis ist freie Software unter der GNU General Public License v3 (oder später) und kommt ohne jede Gewährleistung. " +
             "Unabhängiges Projekt, nicht verbunden mit ASUSTeK Computer Inc.",
@@ -183,7 +184,8 @@ sealed class SettingsPage : UserControl, IPage
         Content = Ui.Scroll(root);
     }
 
-    /// <summary>Neue Version, „Jetzt suchen“ und der Schalter für die tägliche Prüfung (je Benutzer).</summary>
+    /// <summary>New version, "Check now" and the daily check switch (per user).
+    /// Neue Version, „Jetzt suchen“ und der Schalter für die tägliche Prüfung (je Benutzer).</summary>
     StackPanel UpdatePanel()
     {
         var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 4) };
@@ -271,7 +273,7 @@ sealed class SettingsPage : UserControl, IPage
             MessageBox.Show(owner, ex.Message, "Borealis", MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
-        // Gleichnamiges Profil nicht stillschweigend überschreiben
+        // Don't silently overwrite a profile with the same name / Gleichnamiges Profil nicht stillschweigend überschreiben
         var existing = S.Status?.Profiles ?? [];
         while (existing.Any(n => string.Equals(n, profile.Name, StringComparison.CurrentCultureIgnoreCase)))
         {
@@ -287,7 +289,8 @@ sealed class SettingsPage : UserControl, IPage
     static string SafeFileName(string name) =>
         string.Concat(name.Select(c => System.IO.Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
 
-    /// <summary>Zustand eines Dienstes vom Borealis-Dienst (deutsch) für die Anzeige.</summary>
+    /// <summary>Service state from the Borealis service (German) for display.
+    /// Dienstzustand vom Borealis-Dienst (deutsch) für die Anzeige.</summary>
     static string ServiceState(string? state) => state switch
     {
         null => "?",
@@ -297,7 +300,8 @@ sealed class SettingsPage : UserControl, IPage
         _ => state,
     };
 
-    /// <summary>Sprache und Farbschema der Oberfläche (je Benutzer, wirkt sofort).</summary>
+    /// <summary>UI language and theme (per user, takes effect at once).
+    /// Sprache und Farbschema (je Benutzer, wirkt sofort).</summary>
     StackPanel AppearanceCard()
     {
         var panel = new StackPanel();
@@ -318,7 +322,8 @@ sealed class SettingsPage : UserControl, IPage
         return panel;
     }
 
-    /// <summary>Hardwarezugriff: Zustand von PawnIO, Einrichtung.</summary>
+    /// <summary>Hardware access: PawnIO state and setup.
+    /// Hardwarezugriff: Zustand von PawnIO, Einrichtung.</summary>
     StackPanel HardwareCard()
     {
         var panel = new StackPanel();

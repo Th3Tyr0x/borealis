@@ -1,12 +1,13 @@
-﻿# Signiert Dateien (Authenticode, SHA-256, mit Zeitstempel) mit einem Code-Signing-Zertifikat aus dem Windows-
-# Zertifikatspeicher. Das geht auch mit Cloud- oder Smartcard-Zertifikaten (z. B. Certum SimplySign), solange das
-# Zertifikat in "Eigene Zertifikate" erscheint; Windows fragt dann ggf. nach der PIN.
-# Ohne Windows SDK (kein signtool nötig). Aufgerufen von build.ps1 und vom Installer-Bau (Inno Setup, SignTool).
+﻿# Signs files (Authenticode, SHA-256, timestamp) with a code signing certificate from the Windows store,
+# also cloud or smartcard certificates (e.g. Certum SimplySign). No Windows SDK needed.
+# Signiert Dateien (Authenticode, SHA-256, Zeitstempel) mit einem Code-Signing-Zertifikat aus dem Windows-Speicher,
+# auch Cloud- oder Smartcard-Zertifikate (z. B. Certum SimplySign). Ohne Windows SDK.
 param(
     [Parameter(Mandatory)][string]$Thumbprint,
     [Parameter(Mandatory)][string[]]$Path,
     [string]$TimestampServer = 'http://timestamp.digicert.com',
-    # Nur zum Testen mit einem selbst erstellten Zertifikat: Signatur auch ohne vertrauenswürdige Kette akzeptieren
+    # Testing with a self-made certificate only: accept an untrusted chain
+    # Nur zum Testen mit eigenem Zertifikat: nicht vertrauenswürdige Kette akzeptieren
     [switch]$AllowUntrusted
 )
 
