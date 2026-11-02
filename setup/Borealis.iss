@@ -16,6 +16,14 @@ AppPublisherURL=https://github.com/Th3Tyr0x/borealis
 AppSupportURL=https://github.com/Th3Tyr0x/borealis/issues
 AppUpdatesURL=https://github.com/Th3Tyr0x/borealis/releases
 AppComments={cm:AppComments}
+AppCopyright=Copyright (C) 2026 The Borealis contributors
+; Versionsinfos der Setup-Datei (Eigenschaften → Details)
+VersionInfoVersion={#AppVersion}
+VersionInfoProductName=Borealis
+VersionInfoProductVersion={#AppVersion}
+VersionInfoDescription=Borealis Setup – lighting and fan control for ASUS motherboards
+VersionInfoCompany=The Borealis contributors
+VersionInfoCopyright=Copyright (C) 2026 The Borealis contributors
 DefaultDirName={autopf}\Borealis
 ; Installationsordner immer anzeigen (Standard „auto“ überspringt ihn bei Updates)
 DisableDirPage=no
