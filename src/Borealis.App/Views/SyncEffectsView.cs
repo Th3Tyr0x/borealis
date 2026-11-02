@@ -59,7 +59,7 @@ sealed class SyncEffectsView : UserControl
         UpdateInfo();
         left.Children.Add(info);
         // Ein/Aus wie „RGB-Beleuchtung ein-/ausschalten“ in Armoury Crate; „Aus“ ist kein Effekt mehr
-        var power = new CheckBox { Style = Ui.Style("Switch"), Content = "Beleuchtung an", IsChecked = on, Margin = new Thickness(0, 0, 0, 20) };
+        var power = new CheckBox { Style = Ui.Style("Switch"), Content = Loc.T("Beleuchtung an", "Lighting on"), IsChecked = on, Margin = new Thickness(0, 0, 0, 20) };
         power.Click += (_, _) =>
         {
             if (power.IsChecked == true)

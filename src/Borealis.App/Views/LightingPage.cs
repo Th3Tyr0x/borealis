@@ -109,7 +109,7 @@ sealed class LightingPage : UserControl, IPage
         if (S.ZonesOf("Mainboard").Any())
             devices.Add(("Mainboard", Loc.T("Mainboard", "Motherboard"), $"{BoardName} · {Count("Mainboard", Loc.T("Zone", "zone"), Loc.T("Zonen", "zones"))}", "IconMainboard", resolved.Mainboard, () => sync.Mainboard, v => sync.Mainboard = v));
         if (S.ZonesOf("Argb").Any())
-            devices.Add(("Argb", Loc.T("ARGB-Header", "ARGB headers"), $"{Count("Argb", "Header", "Header")} · {S.ZonesOf("Argb").Sum(z => z.LedCount)} LEDs", "IconStrip", resolved.Argb, () => sync.Argb, v => sync.Argb = v));
+            devices.Add(("Argb", Loc.T("ARGB-Header", "ARGB headers"), $"{Count("Argb", Loc.T("Header", "header"), Loc.T("Header", "headers"))} · {S.ZonesOf("Argb").Sum(z => z.LedCount)} LEDs", "IconStrip", resolved.Argb, () => sync.Argb, v => sync.Argb = v));
         if (S.ZonesOf("Ram").Any())
             devices.Add(("Ram", Loc.T("Arbeitsspeicher", "Memory"), Count("Ram", Loc.T("Modul", "module"), Loc.T("Module", "modules")), "IconRam", resolved.Ram, () => sync.Ram, v => sync.Ram = v));
 
