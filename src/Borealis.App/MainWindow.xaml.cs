@@ -71,6 +71,9 @@ public partial class MainWindow : Window
     /// <summary>Kennung der offenen Seite (Name des Navigationspunkts), z. B. „NavFan“.</summary>
     public string CurrentPage => pages.FirstOrDefault(p => p.Value == PageHost.Content).Key?.Name ?? NavSync.Name;
 
+    /// <summary>Einstellungsseite neu aufbauen (z. B. nachdem die Update-Prüfung eine neue Version gefunden hat).</summary>
+    public void RefreshSettings() => pages[NavSettings].Rebuild();
+
     /// <summary>Seite über ihre Kennung öffnen (nach dem Neuaufbau des Fensters).</summary>
     public void SelectPage(string name)
     {

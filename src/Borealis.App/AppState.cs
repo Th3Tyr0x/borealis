@@ -83,6 +83,10 @@ sealed class AppState
         await SendAsync(new PipeRequest { Command = Commands.Save, Profile = p, Labels = new(Labels) }, reload: true);
     }
 
+    /// <summary>Profil aus einer Datei übernehmen: speichern, aktiv setzen und anwenden.</summary>
+    public Task ImportAsync(LightingProfile profile) =>
+        SendAsync(new PipeRequest { Command = Commands.Save, Profile = profile.Clone(), Labels = new(Labels) }, reload: true);
+
     /// <summary>Aktives Profil auf <see cref="LightingProfile.CreateDefault"/> zurücksetzen (Name bleibt).</summary>
     public Task ResetActiveProfileAsync() =>
         SendAsync(new PipeRequest { Command = Commands.Save, Profile = LightingProfile.CreateDefault(Profile.Name), Labels = new(Labels) }, reload: true);

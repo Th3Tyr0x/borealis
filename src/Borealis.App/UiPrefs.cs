@@ -21,6 +21,13 @@ public sealed record UiPrefs
     public ThemeChoice Theme { get; set; } = ThemeChoice.Dark;
     /// <summary>Beim ersten Start wurde schon gefragt, ob PawnIO eingerichtet werden soll.</summary>
     public bool PawnIoAsked { get; set; }
+    /// <summary>Einmal am Tag bei GitHub nachsehen, ob es eine neuere Version gibt (nur nachsehen, kein Download).</summary>
+    public bool CheckForUpdates { get; set; } = true;
+    /// <summary>Letzte erfolgreiche Update-Prüfung und die dabei gefundene neueste Version (z. B. „0.2.0“).</summary>
+    public DateTime? LastUpdateCheck { get; set; }
+    public string? LatestVersion { get; set; }
+    /// <summary>Für diese Version kam schon ein Hinweis im Infobereich.</summary>
+    public string? NotifiedVersion { get; set; }
 
     static readonly string FilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Borealis", "ui.json");
     static readonly JsonSerializerOptions Json = new()

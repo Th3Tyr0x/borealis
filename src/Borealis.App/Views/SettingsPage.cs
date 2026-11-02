@@ -81,6 +81,16 @@ sealed class SettingsPage : UserControl, IPage
         profileButtons.Children.Add(add);
         profileButtons.Children.Add(resetProfile);
         profiles.Children.Add(profileButtons);
+        var exportButton = new Button { Content = Loc.T("Aktives Profil exportieren …", "Export active profile …"), Margin = new Thickness(0, 8, 0, 0) };
+        exportButton.Click += (_, _) => ExportProfile();
+        var importButton = new Button { Content = Loc.T("Profil importieren …", "Import profile …"), Margin = new Thickness(10, 8, 0, 0) };
+        importButton.Click += async (_, _) => await ImportProfileAsync();
+        var transferButtons = new StackPanel { Orientation = Orientation.Horizontal };
+        transferButtons.Children.Add(exportButton);
+        transferButtons.Children.Add(importButton);
+        profiles.Children.Add(transferButtons);
+        profiles.Children.Add(Ui.Hint(Loc.T("Eine Profildatei enthält die Beleuchtung (Effekte, Farben, Effekt nach dem Herunterfahren). Lüfter, Farbabgleich und Zonennamen bleiben auf diesem PC.",
+                                            "A profile file contains the lighting (effects, colors, effect after shutdown). Fans, color matching and zone names stay on this PC."), 8));
         root.Children.Add(Ui.Card(profiles));
 
         // Verhalten
@@ -155,6 +165,7 @@ sealed class SettingsPage : UserControl, IPage
         info.Children.Add(Ui.Section("Info"));
         info.Children.Add(new TextBlock { Text = $"{Loc.T("Borealis-Dienst", "Borealis service")}: {(status == null ? Loc.T("nicht verbunden", "not connected") : "v" + status.ServiceVersion)}" });
         info.Children.Add(new TextBlock { Text = $"App: v{typeof(SettingsPage).Assembly.GetName().Version} · .NET {Environment.Version}", Margin = new Thickness(0, 4, 0, 0) });
+        info.Children.Add(UpdatePanel());
         // Hinweis, den die GPL für Programme mit Oberfläche vorsieht
         info.Children.Add(Ui.Hint(Loc.T(
             "Borealis ist freie Software unter der GNU General Public License v3 (oder später) und kommt ohne jede Gewährleistung. " +
@@ -171,6 +182,110 @@ sealed class SettingsPage : UserControl, IPage
 
         Content = Ui.Scroll(root);
     }
+
+    /// <summary>Neue Version, „Jetzt suchen“ und der Schalter für die tägliche Prüfung (je Benutzer).</summary>
+    StackPanel UpdatePanel()
+    {
+        var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 4) };
+        var prefs = UiPrefs.Current;
+        var result = new TextBlock { TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 0, 0, 8) };
+        if (UpdateCheck.Available is { } v)
+        {
+            result.Text = Loc.T($"Borealis {v} ist verfügbar.", $"Borealis {v} is available.");
+            result.Foreground = Ui.Brush("Accent");
+            result.FontWeight = FontWeights.SemiBold;
+        }
+        else if (prefs.LastUpdateCheck is { } last)
+        {
+            result.Text = Loc.T($"Borealis ist aktuell (geprüft {last.ToLocalTime():g}).", $"Borealis is up to date (checked {last.ToLocalTime():g}).");
+            result.Foreground = Ui.Brush("TextDim");
+        }
+        else result.Visibility = Visibility.Collapsed;
+        panel.Children.Add(result);
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal };
+        if (UpdateCheck.Available != null)
+        {
+            var open = new Button { Content = Loc.T("Zur Release-Seite", "Open release page"), Style = Ui.Style("AccentButton"), Margin = new Thickness(0, 0, 10, 0) };
+            open.Click += (_, _) => UpdateCheck.OpenReleasePage();
+            buttons.Children.Add(open);
+        }
+        var check = new Button { Content = Loc.T("Jetzt nach Updates suchen", "Check for updates now") };
+        check.Click += async (_, _) =>
+        {
+            check.IsEnabled = false;
+            var before = UiPrefs.Current.LastUpdateCheck;
+            await UpdateCheck.CheckAsync(force: true);
+            if (UiPrefs.Current.LastUpdateCheck == before)
+            {
+                check.IsEnabled = true;
+                result.Visibility = Visibility.Visible;
+                result.Foreground = Ui.Brush("Warn");
+                result.Text = Loc.T("GitHub war nicht erreichbar.", "GitHub could not be reached.");
+                return;
+            }
+            Rebuild();
+        };
+        buttons.Children.Add(check);
+        panel.Children.Add(buttons);
+
+        var auto = new CheckBox { Style = Ui.Style("Switch"), IsChecked = prefs.CheckForUpdates, Margin = new Thickness(0, 12, 0, 0),
+            Content = Loc.T("Einmal am Tag nach Updates suchen", "Check for updates once a day") };
+        auto.Click += (_, _) => UiPrefs.Save(UiPrefs.Current with { CheckForUpdates = auto.IsChecked == true });
+        panel.Children.Add(auto);
+        panel.Children.Add(Ui.Hint(Loc.T("Fragt nur bei GitHub nach der neuesten Version; heruntergeladen oder installiert wird nichts.",
+                                         "Only asks GitHub for the latest version; nothing is downloaded or installed."), 6));
+        return panel;
+    }
+
+    void ExportProfile()
+    {
+        var dialog = new Microsoft.Win32.SaveFileDialog
+        {
+            Title = Loc.T("Profil exportieren", "Export profile"),
+            FileName = SafeFileName(S.Profile.Name) + ProfileTransfer.FileExtension,
+            Filter = Loc.T("Borealis-Profil", "Borealis profile") + $" (*{ProfileTransfer.FileExtension})|*{ProfileTransfer.FileExtension}",
+            AddExtension = false,
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true) return;
+        try { System.IO.File.WriteAllText(dialog.FileName, ProfileTransfer.Export(S.Profile)); }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(Window.GetWindow(this)!, Loc.T("Export fehlgeschlagen: ", "Export failed: ") + ex.Message, "Borealis", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    async Task ImportProfileAsync()
+    {
+        var owner = Window.GetWindow(this)!;
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = Loc.T("Profil importieren", "Import profile"),
+            Filter = Loc.T("Borealis-Profil", "Borealis profile") + $" (*{ProfileTransfer.FileExtension})|*{ProfileTransfer.FileExtension}|JSON (*.json)|*.json",
+        };
+        if (dialog.ShowDialog(owner) != true) return;
+        LightingProfile profile;
+        try { profile = ProfileTransfer.Import(dialog.FileName); }
+        catch (Exception ex) when (ex is System.IO.InvalidDataException or System.IO.IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(owner, ex.Message, "Borealis", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+        // Gleichnamiges Profil nicht stillschweigend überschreiben
+        var existing = S.Status?.Profiles ?? [];
+        while (existing.Any(n => string.Equals(n, profile.Name, StringComparison.CurrentCultureIgnoreCase)))
+        {
+            var name = InputDialog.Show(owner, Loc.T("Profil importieren", "Import profile"),
+                Loc.T($"Ein Profil „{profile.Name}“ gibt es schon. Name für das importierte Profil:", $"A profile “{profile.Name}” already exists. Name for the imported profile:"),
+                profile.Name + " (2)");
+            if (string.IsNullOrWhiteSpace(name)) return;
+            profile.Name = name.Trim();
+        }
+        await S.ImportAsync(profile);
+    }
+
+    static string SafeFileName(string name) =>
+        string.Concat(name.Select(c => System.IO.Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
 
     /// <summary>Zustand eines Dienstes vom Borealis-Dienst (deutsch) für die Anzeige.</summary>
     static string ServiceState(string? state) => state switch

@@ -65,6 +65,8 @@ public partial class App : Application
                 Dispatcher.BeginInvoke(RebuildWindow);
         };
         tray.MouseClick += (_, args) => { if (args.Button == Forms.MouseButtons.Left) ShowWindow(); };
+        tray.BalloonTipClicked += (_, _) => UpdateCheck.OpenReleasePage();
+        _ = WatchForUpdatesAsync();
 
         if (!e.Args.Contains("--minimized"))
         {
@@ -77,6 +79,27 @@ public partial class App : Application
 
     Forms.ToolStripMenuItem? openItem, exitItem;
     bool? builtLight;
+
+    /// <summary>
+    /// Läuft, solange die App im Infobereich ist: kurz nach dem Start und dann alle 6 Stunden nachsehen (ins Netz geht
+    /// <see cref="UpdateCheck"/> höchstens einmal am Tag). Für jede neue Version gibt es einen Hinweis im Infobereich.
+    /// </summary>
+    async Task WatchForUpdatesAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(30));
+        while (true)
+        {
+            if (await UpdateCheck.CheckAsync(force: false) is { } v && UiPrefs.Current.NotifiedVersion != v.ToString() && tray != null)
+            {
+                UiPrefs.Save(UiPrefs.Current with { NotifiedVersion = v.ToString() });
+                tray.ShowBalloonTip(10000, Loc.T("Neue Borealis-Version", "New Borealis version"),
+                    Loc.T($"Borealis {v} ist verfügbar. Klicken, um die Release-Seite zu öffnen.", $"Borealis {v} is available. Click to open the release page."),
+                    Forms.ToolTipIcon.Info);
+                window?.RefreshSettings();
+            }
+            await Task.Delay(TimeSpan.FromHours(6));
+        }
+    }
 
     void UpdateTrayTexts()
     {
