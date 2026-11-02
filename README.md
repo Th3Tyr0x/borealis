@@ -38,7 +38,7 @@ does the work in the background – no ads, no account, no cloud.
 | CPU | AMD Ryzen 7000 (Zen 4) |
 
 Other ASUS boards with the same USB lighting controller and Nuvoton chip will likely work fully or in part, but are
-untested. Reports from other boards are welcome – please open an issue.
+untested. Reports from other boards are welcome – see [CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ## Installation
 
@@ -102,7 +102,7 @@ Einstellungen, ein Windows-Dienst für die Arbeit im Hintergrund – keine Werbu
 ### Getestete Hardware
 
 Siehe [Tested hardware](#tested-hardware). Andere ASUS-Boards mit demselben USB-Beleuchtungscontroller und Nuvoton-Chip
-funktionieren wahrscheinlich ganz oder teilweise, sind aber nicht getestet. Rückmeldungen gern als Issue.
+funktionieren wahrscheinlich ganz oder teilweise, sind aber nicht getestet. Rückmeldungen gern, siehe [CONTRIBUTING.md](docs/CONTRIBUTING.md#mitmachen).
 
 ### Installation
 
