@@ -1,15 +1,18 @@
 name: Hardware report / Hardware-Rückmeldung
 description: Tell us how Borealis works on your system. / Wie läuft Borealis auf deinem System?
+title: "[Hardware] <motherboard / Mainboard>"
 labels: ["hardware"]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for testing Borealis on other hardware! / Danke fürs Testen auf anderer Hardware!
+        Thanks for testing Borealis on other hardware! Reports that something **works** help as much as reports that it doesn't.
+        Danke fürs Testen auf anderer Hardware! Rückmeldungen, dass etwas **funktioniert**, helfen genauso wie Fehlerberichte.
   - type: input
     id: version
     attributes:
       label: Borealis version / Version
+      description: Settings → About / Einstellungen → Info
       placeholder: "0.1.0"
     validations:
       required: true
@@ -24,7 +27,34 @@ body:
     id: cpu-ram
     attributes:
       label: CPU and memory / CPU und RAM
-      placeholder: "Ryzen 7 7800X3D; 2 × 32 GB DDR5 (model / Modell)"
+      placeholder: "Ryzen 7 7800X3D; 2 × 32 GB DDR5, <module model / Modul-Modell>"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version / Windows-Version
+      placeholder: "Windows 11 24H2"
+    validations:
+      required: true
+  - type: dropdown
+    id: pawnio
+    attributes:
+      label: PawnIO driver installed? / PawnIO-Treiber installiert?
+      options:
+        - "Yes / Ja"
+        - "No / Nein"
+        - "Not sure / Weiß nicht"
+    validations:
+      required: true
+  - type: dropdown
+    id: armoury-crate
+    attributes:
+      label: Armoury Crate
+      options:
+        - "Uninstalled / Deinstalliert"
+        - "Installed, services turned off by Borealis / Installiert, Dienste von Borealis abgeschaltet"
+        - "Installed and running / Installiert und aktiv"
     validations:
       required: true
   - type: textarea
@@ -33,26 +63,44 @@ body:
       label: Connected devices / Angeschlossene Geräte
       description: What is on the ARGB and fan headers? / Was hängt an den ARGB- und Lüfteranschlüssen?
       placeholder: |
-        ARGB 1: AIO pump head / AIO-Pumpe
+        ARGB 1: AIO pump head, 24 LEDs / AIO-Pumpe, 24 LEDs
         CPU_FAN: radiator fans / Radiatorlüfter
+        AIO_PUMP: pump / Pumpe
   - type: checkboxes
     id: works
     attributes:
       label: What works? / Was funktioniert?
+      description: Tick everything that works correctly. / Alles ankreuzen, was richtig funktioniert.
       options:
         - label: Motherboard lighting / Mainboard-Beleuchtung
         - label: ARGB headers / ARGB-Header
         - label: Memory lighting / RAM-Beleuchtung
-        - label: Fan speeds and temperatures / Drehzahlen und Temperaturen
+        - label: Software effects (smooth, no flicker) / Software-Effekte (flüssig, ohne Flackern)
+        - label: Effect after shutdown / Effekt nach dem Herunterfahren
+        - label: Fan speeds / Drehzahlen
+        - label: Temperatures / Temperaturen
         - label: Fan curves / Lüfterkurven
         - label: Auto tuning / Auto-Tuning
   - type: textarea
     id: problems
     attributes:
       label: What does not work? / Was funktioniert nicht?
+      description: Wrong colors, missing devices, wrong fan names, wrong values … / Falsche Farben, fehlende Geräte, falsche Lüfternamen, falsche Werte …
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Optional, e.g. the Devices or Fans page. / Optional, z. B. die Seite Geräte oder Lüfter.
   - type: textarea
     id: log
     attributes:
       label: Service log / Dienst-Protokoll
-      description: From / Aus `C:\ProgramData\Borealis\logs` – remove anything personal first. / Vorher Persönliches entfernen.
+      description: "Newest file from / Neueste Datei aus `C:\\ProgramData\\Borealis\\logs`"
       render: text
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy / Datenschutz
+      options:
+        - label: I removed personal data (user name, paths) from the log. / Ich habe persönliche Daten (Benutzername, Pfade) aus dem Protokoll entfernt.
+          required: true

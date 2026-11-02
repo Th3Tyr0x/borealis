@@ -1,11 +1,18 @@
 name: Bug report / Fehler melden
 description: Something does not work as expected. / Etwas funktioniert nicht wie erwartet.
+title: "[Bug] "
 labels: ["bug"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        On a board other than the tested one? Please use the **hardware report** instead.
+        Anderes Board als das getestete? Dann bitte die **Hardware-Rückmeldung** nutzen.
   - type: input
     id: version
     attributes:
       label: Borealis version / Version
+      description: Settings → About / Einstellungen → Info
       placeholder: "0.1.0"
     validations:
       required: true
@@ -16,21 +23,64 @@ body:
       placeholder: "Windows 11 24H2, ROG STRIX B650E-E GAMING WIFI"
     validations:
       required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area / Bereich
+      multiple: true
+      options:
+        - "Lighting / Beleuchtung"
+        - "Fans / Lüfter"
+        - "Sensors / Sensoren"
+        - "App / Oberfläche"
+        - "Service / Dienst"
+        - "Setup / Installation"
+    validations:
+      required: true
   - type: textarea
     id: steps
     attributes:
-      label: What did you do? / Was hast du gemacht?
+      label: Steps to reproduce / Schritte zum Nachstellen
+      placeholder: |
+        1.
+        2.
+        3.
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: What did you expect, what happened? / Was hast du erwartet, was ist passiert?
+      label: Expected behavior / Erwartet
     validations:
       required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior / Tatsächlich
+      description: Error messages and screenshots help. / Fehlermeldungen und Screenshots helfen.
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often? / Wie oft?
+      options:
+        - "Always / Immer"
+        - "Sometimes / Manchmal"
+        - "Once / Einmal"
+        - "After sleep or restart / Nach Standby oder Neustart"
   - type: textarea
     id: log
     attributes:
       label: Service log / Dienst-Protokoll
-      description: From / Aus `C:\ProgramData\Borealis\logs` – remove anything personal first. / Vorher Persönliches entfernen.
+      description: "Newest file from / Neueste Datei aus `C:\\ProgramData\\Borealis\\logs`"
       render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks / Prüfungen
+      options:
+        - label: I searched the existing issues. / Ich habe die vorhandenen Issues durchsucht.
+          required: true
+        - label: I removed personal data (user name, paths) from the log. / Ich habe persönliche Daten (Benutzername, Pfade) aus dem Protokoll entfernt.
+          required: true

@@ -1,5 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability / Sicherheitslücke
     url: https://github.com/Th3Tyr0x/borealis/security/advisories/new
-    about: Please report privately. / Bitte vertraulich melden.
+    about: Please report privately, not as an issue. / Bitte vertraulich melden, nicht als Issue.
+  - name: Hardware reference / Hardware-Referenz
+    url: https://github.com/Th3Tyr0x/borealis/blob/main/docs/hardware.md
+    about: How Borealis talks to the lighting controller, fan chip and memory. / Wie Borealis Beleuchtung, Lüfter-Chip und RAM anspricht.
