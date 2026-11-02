@@ -196,15 +196,17 @@ Jeder Lüfterkanal hat eine Regelbank: SYSFAN `1`, CPUFAN `2`, AUXFAN0 `3`, AUXF
 
 | Register in der Bank | Wert |
 |---|---|
-| `00` | Temperaturquelle (`1C` auf allen Kanälen: CPU-Temperatur, liest der Chip selbst) |
+| `00` | Temperaturquelle in Bit 0–4 (`1C` auf allen Kanälen: CPU-Temperatur, liest der Chip selbst; `01` = SYSTIN/Mainboard, `02` = CPUTIN/Sockel) |
 | `02` | `40` = Modus SmartFan IV |
+| `03`, `04` | Schrittzeit beim Hoch- bzw. Runterregeln (`00` auf allen Kanälen = Leistung folgt der Kurve sofort) **[beobachtet]**, Einheit **[offen]** |
 | `21`–`24` | Temperaturen T1–T4 (°C, höchstens 100) |
 | `27`–`2A` | Leistung P1–P4 (0–255) |
 
 Der Lüfterdienst des Herstellers schreibt T1, T2, T3, T3 und P1, P2, P3, `FF`; über dem dritten Punkt läuft der Lüfter
 also voll. Weil der Chip die CPU-Temperatur selbst liest, wirken die Kurven auch ohne laufende Software (fail-safe).
 **[beobachtet]** Borealis schreibt die Kurven genauso und liest sie zurück. Der Lüfterdienst des Herstellers wird vorher
-angehalten; er würde sonst beim Start seine eigenen Kurven schreiben.
+angehalten; er würde sonst beim Start seine eigenen Kurven schreiben. Bei gewählter Temperaturquelle schreibt Borealis
+auch Bit 0–4 von Register `00` (die oberen Bits bleiben) und liest sie zurück; der CPU-Lüfter behält immer die CPU.
 
 ### 2.4 Lüfteranschlüsse beim getesteten Board
 

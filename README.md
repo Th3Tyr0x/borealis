@@ -39,9 +39,11 @@ does the work in the background – no ads, no account, no cloud.
   (e.g. comet, wave, fire, music, CPU/RAM load), shared sync or per-device settings, color matching, effect after
   shutdown, LED count per header.
 - **Fans:** curves stored in the fan chip (they keep working when Borealis is not running), Silent/Standard/Turbo
-  modes, custom curves per fan, auto tuning (measures speed, minimum and start-up duty of every fan and the AIO pump).
+  modes, custom curves per fan, temperature source per fan (CPU, motherboard or socket; the CPU fan always follows
+  the CPU), auto tuning (measures speed, minimum and start-up duty of every fan and the AIO pump).
 - **Sensors:** live fan speeds, CPU temperature (Tctl, CCDs), motherboard and socket temperature.
-- **Other:** profiles, English/German, light/dark/system theme, start with Windows.
+- **Other:** profiles with export/import, English/German, light/dark/system theme, start with Windows, optional daily
+  check for new versions (asks GitHub only, downloads nothing).
 
 ## Tested hardware
 
@@ -111,9 +113,11 @@ Bilder der Oberfläche siehe oben; die App gibt es auch auf Deutsch (Einstellung
   (z. B. Komet, Welle, Feuer, Musik, CPU-/RAM-Last), gemeinsamer Sync oder Einstellung je Gerät, Farbabgleich,
   Effekt nach dem Herunterfahren, LED-Anzahl je Header.
 - **Lüfter:** Kurven direkt im Lüfter-Chip (regeln auch, wenn Borealis nicht läuft), Modi Leise/Standard/Turbo,
-  eigene Kurven je Lüfter, Auto-Tuning (misst Drehzahl, Mindest- und Anlaufleistung jedes Lüfters und der AIO-Pumpe).
+  eigene Kurven je Lüfter, Temperaturquelle je Lüfter (CPU, Mainboard oder Sockel; der CPU-Lüfter regelt immer nach
+  der CPU), Auto-Tuning (misst Drehzahl, Mindest- und Anlaufleistung jedes Lüfters und der AIO-Pumpe).
 - **Sensoren:** Drehzahlen, CPU-Temperatur (Tctl, CCDs), Mainboard- und Sockeltemperatur live.
-- **Sonstiges:** Profile, Englisch/Deutsch, helles/dunkles/System-Farbschema, Start mit Windows.
+- **Sonstiges:** Profile mit Export/Import, Englisch/Deutsch, helles/dunkles/System-Farbschema, Start mit Windows,
+  auf Wunsch tägliche Suche nach neuen Versionen (fragt nur GitHub, lädt nichts herunter).
 
 ### Getestete Hardware
 

@@ -193,15 +193,17 @@ Each fan channel has a control bank: SYSFAN `1`, CPUFAN `2`, AUXFAN0 `3`, AUXFAN
 
 | Register in the bank | Value |
 |---|---|
-| `00` | temperature source (`1C` on all channels: CPU temperature, read by the chip itself) |
+| `00` | temperature source in bits 0–4 (`1C` on all channels: CPU temperature, read by the chip itself; `01` = SYSTIN/motherboard, `02` = CPUTIN/socket) |
 | `02` | `40` = SmartFan IV mode |
+| `03`, `04` | step-up / step-down time (`00` on all channels = duty follows the curve at once) **[observed]**, unit **[open]** |
 | `21`–`24` | temperatures T1–T4 (°C, at most 100) |
 | `27`–`2A` | duty P1–P4 (0–255) |
 
 The vendor fan service writes T1, T2, T3, T3 and P1, P2, P3, `FF`, so the fan runs at full speed above the third point.
 Because the chip reads the CPU temperature itself, the curves keep working when no software runs (fail-safe).
 **[observed]** Borealis writes curves the same way and reads them back. The vendor fan service is stopped first; it would
-otherwise write its own curves when it starts.
+otherwise write its own curves when it starts. With a chosen temperature source, Borealis also writes bits 0–4 of
+register `00` (the upper bits stay) and reads them back; the CPU fan always keeps the CPU source.
 
 ### 2.4 Fan headers on the tested board
 
